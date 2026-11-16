@@ -5,10 +5,15 @@ export type Product = {
   price: number;
   description: string;
   image: string;
+  stock: number;
 };
 
 export const WHATSAPP_NUMBER = "23054766618";
 
+/** At or below this many units a product is flagged "low stock". */
+export const LOW_STOCK = 5;
+
+// Starting catalogue. Stock numbers are placeholders until real counts are entered in the admin.
 export const products: Product[] = [
   {
     id: "butter",
@@ -18,6 +23,7 @@ export const products: Product[] = [
     description:
       "Rich butter to help seal in moisture and keep hair feeling soft.",
     image: "/images/butter.png",
+    stock: 24,
   },
   {
     id: "gel",
@@ -26,6 +32,7 @@ export const products: Product[] = [
     price: 400,
     description: "For curl definition, slip and gentle detangling.",
     image: "/images/gel.png",
+    stock: 30,
   },
   {
     id: "oil",
@@ -34,6 +41,7 @@ export const products: Product[] = [
     price: 600,
     description: "An oil for scalp care and sealing in moisture.",
     image: "/images/oil.png",
+    stock: 18,
   },
   {
     id: "spray",
@@ -42,6 +50,7 @@ export const products: Product[] = [
     price: 400,
     description: "A refreshing addition to your scalp-care routine.",
     image: "/images/spray.png",
+    stock: 3,
   },
   {
     id: "shea",
@@ -51,6 +60,7 @@ export const products: Product[] = [
     description:
       "250 ml · 100% unrefined shea butter to help soften dry skin and seal moisture into hair.",
     image: "/images/shea.png",
+    stock: 0,
   },
 ];
 

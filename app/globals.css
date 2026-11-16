@@ -228,7 +228,7 @@ h1 em {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  padding: 80px 5vw 80px clamp(32px, 5vw, 72px);
+  padding: 80px 5vw 80px var(--edge);
 }
 .hero-text p {
   max-width: 470px;
@@ -265,22 +265,6 @@ h1 em {
 .stripe span {
   color: var(--tan);
   padding: 0 26px;
-}
-
-/* Boxed blocks: same width as the navbar content, not full-bleed */
-.hero,
-.stripe,
-.story,
-.ritual,
-footer {
-  margin-inline: var(--edge);
-}
-footer {
-  margin-bottom: 24px;
-}
-.ritual .wrap,
-footer .wrap {
-  padding-inline: clamp(24px, 5vw, 72px);
 }
 
 /* Sections */
@@ -376,7 +360,7 @@ footer .wrap {
   background: #eee1cf;
 }
 .story-copy {
-  padding: 80px clamp(30px, 5vw, 72px);
+  padding: 80px var(--edge) 80px clamp(30px, 5vw, 72px);
   display: flex;
   justify-content: center;
   flex-direction: column;
@@ -806,4 +790,46 @@ footer .brand small {
     transition-delay: 0ms !important;
   }
   html { scroll-behavior: auto; }
+}
+
+/* Stock states on the shop */
+.product .image .badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: var(--brown);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 99px;
+  z-index: 1;
+}
+.product .image .badge.low {
+  background: var(--gold);
+  color: var(--brown);
+}
+.product .image.sold-out img {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+.product .image .no-photo {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a7c68;
+}
+.buy-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.buy-row button:disabled:hover {
+  background: transparent;
+  color: var(--olive);
 }

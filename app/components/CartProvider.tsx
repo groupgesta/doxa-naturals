@@ -9,15 +9,16 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { products, WHATSAPP_NUMBER, money } from "../data/products";
+import { WHATSAPP_NUMBER, money, type Product } from "../data/products";
+import { useProducts } from "../lib/store";
 
 type Cart = Record<string, number>;
+export type CartLine = { product: Product; qty: number };
 
 type CartContextValue = {
-  cart: Cart;
+  lines: CartLine[];
   count: number;
   total: number;
-  toast: string | null;
   add: (id: string) => void;
   remove: (id: string) => void;
   checkout: () => void;
@@ -32,16 +33,47 @@ export function useCart() {
 }
 
 export default function CartProvider({ children }: { children: ReactNode }) {
+  const items = useProducts();
   const [cart, setCart] = useState<Cart>({});
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const add = useCallback((id: string) => {
-    setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
-    setToast("Added to your bag");
+  const flash = useCallback((msg: string) => {
+    setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 1800);
   }, []);
+
+  // Quantities are clamped to current stock, so lowering stock in the admin
+  // can never leave more in the bag than exists.
+  const lines = useMemo<CartLine[]>(
+    () =>
+      items
+        .map((product) => ({
+          product,
+          qty: Math.min(cart[product.id] ?? 0, product.stock),
+        }))
+        .filter((l) => l.qty > 0),
+    [items, cart],
+  );
+
+  const count = useMemo(() => lines.reduce((a, l) => a + l.qty, 0), [lines]);
+  const total = useMemo(
+    () => lines.reduce((s, l) => s + l.product.price * l.qty, 0),
+    [lines],
+  );
+
+  const add = useCallback(
+    (id: string) => {
+      const p = items.find((x) => x.id === id);
+      if (!p || p.stock <= 0) return flash("Sold out");
+      if ((cart[id] ?? 0) >= p.stock)
+        return flash(`Only ${p.stock} in stock`);
+      setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
+      flash("Added to your bag");
+    },
+    [items, cart, flash],
+  );
 
   const remove = useCallback((id: string) => {
     setCart((c) => {
@@ -51,23 +83,12 @@ export default function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const count = useMemo(
-    () => Object.values(cart).reduce((a, b) => a + b, 0),
-    [cart],
-  );
-
-  const total = useMemo(
-    () => products.reduce((s, p) => s + p.price * (cart[p.id] ?? 0), 0),
-    [cart],
-  );
-
   const checkout = useCallback(() => {
-    const selected = products.filter((p) => cart[p.id]);
-    const msg = selected.length
-      ? `Hello Doxa Naturals! I'd like to order:\n\n${selected
+    const msg = lines.length
+      ? `Hello Doxa Naturals! I'd like to order:\n\n${lines
           .map(
-            (p) =>
-              `${cart[p.id]} × ${p.name} (${p.size}) - ${money(cart[p.id] * p.price)}`,
+            (l) =>
+              `${l.qty} × ${l.product.name} (${l.product.size}) - ${money(l.qty * l.product.price)}`,
           )
           .join(
             "\n",
@@ -78,11 +99,11 @@ export default function CartProvider({ children }: { children: ReactNode }) {
       "_blank",
       "noopener,noreferrer",
     );
-  }, [cart, total]);
+  }, [lines, total]);
 
   const value = useMemo(
-    () => ({ cart, count, total, toast, add, remove, checkout }),
-    [cart, count, total, toast, add, remove, checkout],
+    () => ({ lines, count, total, add, remove, checkout }),
+    [lines, count, total, add, remove, checkout],
   );
 
   return (

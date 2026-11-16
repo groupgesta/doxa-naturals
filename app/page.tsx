@@ -186,6 +186,7 @@ export default function Home() {
               <a href="#collection">Collection</a>
               <a href="#story">Our story</a>
               <a href="#order">Order / Contact</a>
+              <a href="/admin/login">Admin</a>
             </div>
           </div>
           <div className="copy">

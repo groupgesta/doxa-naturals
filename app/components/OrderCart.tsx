@@ -1,24 +1,23 @@
 "use client";
 
-import { money, products } from "../data/products";
+import { money } from "../data/products";
 import { useCart } from "./CartProvider";
 
 export default function OrderCart() {
-  const { cart, total, remove, checkout } = useCart();
-  const selected = products.filter((p) => cart[p.id]);
+  const { lines, total, remove, checkout } = useCart();
 
   return (
     <div className="cart">
       <h3>Your little bag ✳</h3>
       <div>
-        {selected.length ? (
-          selected.map((p) => (
+        {lines.length ? (
+          lines.map(({ product: p, qty }) => (
             <div className="cart-item" key={p.id}>
               <span>
                 {p.name}
                 <br />
                 <small>
-                  {money(p.price)} × {cart[p.id]}
+                  {money(p.price)} × {qty}
                 </small>
               </span>
               <button onClick={() => remove(p.id)}>Remove −</button>
