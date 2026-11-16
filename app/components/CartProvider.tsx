@@ -88,11 +88,7 @@ export default function CartProvider({ children }: { children: ReactNode }) {
   return (
     <CartContext.Provider value={value}>
       {children}
-      <div
-        className="toast"
-        role="status"
-        style={{ display: toast ? "block" : "none" }}
-      >
+      <div className={`toast${toast ? " show" : ""}`} role="status">
         {toast}
       </div>
     </CartContext.Provider>

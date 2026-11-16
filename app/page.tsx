@@ -2,6 +2,7 @@ import Image from "next/image";
 import CartProvider from "./components/CartProvider";
 import Header from "./components/Header";
 import OrderCart from "./components/OrderCart";
+import RevealObserver from "./components/RevealObserver";
 import ProductGrid from "./components/ProductGrid";
 import Year from "./components/Year";
 
@@ -10,6 +11,7 @@ export default function Home() {
     <CartProvider>
       <div className="top">Made in Mauritius · Collection by arrangement</div>
       <Header />
+      <RevealObserver />
 
       <main>
         <section id="home" className="hero">
@@ -32,7 +34,7 @@ export default function Home() {
               </a>
             </div>
           </div>
-          <div className="visual">
+          <div className="visual" data-reveal="zoom" style={{ "--d": "100ms" } as React.CSSProperties}>
             <Image
               src="/images/butter.png"
               alt="Doxa Naturals Rosemary Sealing Butter jar"
@@ -43,13 +45,13 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="stripe">
+        <div className="stripe" data-reveal>
           Softness <span>✦</span> Definition <span>✦</span> Scalp comfort{" "}
           <span>✦</span> Less breakage
         </div>
 
         <section id="collection" className="section wrap">
-          <div className="heading">
+          <div className="heading" data-reveal>
             <div>
               <div className="kicker">The essentials</div>
               <h2>Meet the collection</h2>
@@ -60,14 +62,14 @@ export default function Home() {
             </p>
           </div>
           <ProductGrid />
-          <p className="note">
+          <p className="note" data-reveal>
             Photographs from the Doxa Naturals collection. All prices are in
             Mauritian rupees.
           </p>
         </section>
 
         <section className="story" id="story">
-          <div className="story-visual">
+          <div className="story-visual" data-reveal="zoom">
             <Image
               src="/images/story.png"
               alt="Doxa Naturals products"
@@ -75,7 +77,7 @@ export default function Home() {
               sizes="(max-width: 700px) 100vw, 50vw"
             />
           </div>
-          <div className="story-copy">
+          <div className="story-copy" data-reveal="right">
             <div className="kicker">The beginning</div>
             <h2>It started with my daughter.</h2>
             <p>
@@ -99,14 +101,14 @@ export default function Home() {
 
         <section className="section ritual" id="ritual">
           <div className="wrap">
-            <div className="kicker">A little care goes a long way</div>
-            <h2 className="large">
+            <div className="kicker" data-reveal>A little care goes a long way</div>
+            <h2 className="large" data-reveal style={{ "--d": "80ms" } as React.CSSProperties}>
               Make room for
               <br />
               your natural texture.
             </h2>
             <div className="steps">
-              <div className="step">
+              <div className="step" data-reveal style={{ "--d": "0ms" } as React.CSSProperties}>
                 <div className="number">01</div>
                 <h3>Detangle gently</h3>
                 <p>
@@ -114,7 +116,7 @@ export default function Home() {
                   curl definition, and detangle from the ends upwards.
                 </p>
               </div>
-              <div className="step">
+              <div className="step" data-reveal style={{ "--d": "120ms" } as React.CSSProperties}>
                 <div className="number">02</div>
                 <h3>Care for your scalp</h3>
                 <p>
@@ -122,7 +124,7 @@ export default function Home() {
                   consistent scalp-care routine.
                 </p>
               </div>
-              <div className="step">
+              <div className="step" data-reveal style={{ "--d": "240ms" } as React.CSSProperties}>
                 <div className="number">03</div>
                 <h3>Seal in moisture</h3>
                 <p>
@@ -135,7 +137,7 @@ export default function Home() {
         </section>
 
         <section className="section wrap ordering" id="order">
-          <div>
+          <div data-reveal>
             <div className="kicker">How to order</div>
             <h2>Your next haircare favourite is a message away.</h2>
             <p>
@@ -143,19 +145,19 @@ export default function Home() {
               I&apos;ll confirm availability, payment and collection with you
               personally.
             </p>
-            <div className="order-step">
+            <div className="order-step" data-reveal>
               <b>01</b>
               <span>
                 Choose your products or message me with a question.
               </span>
             </div>
-            <div className="order-step">
+            <div className="order-step" data-reveal>
               <b>02</b>
               <span>
                 Once confirmed, pay in advance by MCB Juice or bank transfer.
               </span>
             </div>
-            <div className="order-step">
+            <div className="order-step" data-reveal>
               <b>03</b>
               <span>
                 Collection by arrangement in Curepipe, Quatre Bornes or Port

@@ -9,8 +9,13 @@ export default function ProductGrid() {
 
   return (
     <div className="grid">
-      {products.map((p) => (
-        <article className="product" key={p.id}>
+      {products.map((p, i) => (
+        <article
+          className="product"
+          key={p.id}
+          data-reveal
+          style={{ "--d": `${i * 90}ms` } as React.CSSProperties}
+        >
           <div className="image">
             <Image
               src={p.image}

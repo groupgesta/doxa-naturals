@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "./CartProvider";
 
 const links = [
@@ -14,6 +14,13 @@ const links = [
 export default function Header() {
   const [open, setOpen] = useState(false);
   const { count } = useCart();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
     <header className="nav">
@@ -28,12 +35,17 @@ export default function Header() {
         />
       </a>
       <button
-        className="menu"
+        className={`menu${open ? " is-open" : ""}`}
         aria-expanded={open}
         aria-controls="links"
+        aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((o) => !o)}
       >
-        Menu ☰
+        <span className="bars" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </span>
       </button>
       <nav className={`links${open ? " open" : ""}`} id="links">
         {links.map((l) => (
@@ -42,7 +54,10 @@ export default function Header() {
           </a>
         ))}
         <a className="btn" href="#order" onClick={() => setOpen(false)}>
-          Bag <span>({count})</span>
+          Bag{" "}
+          <span className="count" key={count}>
+            ({count})
+          </span>
         </a>
       </nav>
     </header>
