@@ -10,10 +10,19 @@ import {
   updateProduct,
   useProducts,
 } from "../../../lib/store";
+import DataTable, { type Column } from "../../components/DataTable";
 import ProductDialog from "../../ProductDialog";
 
 type Filter = "all" | "low" | "out";
 type DialogState = null | { product?: Product };
+
+function stockStatus(stock: number) {
+  return stock <= 0
+    ? { cls: "out", label: "Sold out" }
+    : stock <= LOW_STOCK
+      ? { cls: "low", label: "Low stock" }
+      : { cls: "ok", label: "In stock" };
+}
 
 export default function ProductsView() {
   const products = useProducts();
@@ -40,96 +49,134 @@ export default function ProductsView() {
     });
   }, [products, filter, query]);
 
+  const columns: Column<Product>[] = [
+    {
+      id: "product",
+      header: "Product",
+      primary: true,
+      hideLabel: true,
+      cell: (p) => (
+        <div className="cell-product">
+          <div className="thumb">
+            {p.image ? (
+              <Image src={p.image} alt="" fill sizes="56px" />
+            ) : (
+              <span>—</span>
+            )}
+          </div>
+          <div>
+            <strong>{p.name}</strong>
+            <small>{p.size}</small>
+          </div>
+        </div>
+      ),
+    },
+    { id: "price", header: "Price", cell: (p) => money(p.price) },
+    {
+      id: "stock",
+      header: "Stock",
+      cell: (p) => <StockControl key={p.stock} product={p} />,
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (p) => {
+        const st = stockStatus(p.stock);
+        return <span className={`pill ${st.cls}`}>{st.label}</span>;
+      },
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      align: "right",
+      primary: true,
+      hideLabel: true,
+      cell: (p) => (
+        <RowActions product={p} onEdit={() => setDialog({ product: p })} />
+      ),
+    },
+  ];
+
   return (
     <>
-      <div>
-        <div className="admin-head">
-          <div>
-            <div className="kicker">Catalogue</div>
-            <h1>Products &amp; stock</h1>
-          </div>
-          <button className="btn" onClick={() => setDialog({})}>
-            + Add product
-          </button>
+      <div className="admin-head">
+        <div>
+          <div className="kicker">Catalogue</div>
+          <h1>Products &amp; stock</h1>
         </div>
-
-        <div className="stats">
-          <Stat label="Products" value={products.length} />
-          <Stat label="Units in stock" value={stats.units} />
-          <Stat label="Stock value" value={money(stats.value)} />
-          <Stat
-            label="Needs attention"
-            value={stats.low + stats.out}
-            hint={`${stats.low} low · ${stats.out} sold out`}
-            warn={stats.low + stats.out > 0}
-          />
-        </div>
-
-        <div className="toolbar">
-          <div className="chips" role="group" aria-label="Filter products">
-            {(
-              [
-                ["all", "All"],
-                ["low", "Low stock"],
-                ["out", "Sold out"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                className={filter === key ? "chip on" : "chip"}
-                aria-pressed={filter === key}
-                onClick={() => setFilter(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <input
-            className="search"
-            type="search"
-            placeholder="Search products"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            aria-label="Search products"
-          />
-        </div>
-
-        <div className="table" role="table" aria-label="Products">
-          <div className="tr th" role="row">
-            <span role="columnheader">Product</span>
-            <span role="columnheader">Price</span>
-            <span role="columnheader">Stock</span>
-            <span role="columnheader">Status</span>
-            <span role="columnheader" className="right">
-              Actions
-            </span>
-          </div>
-          {visible.length ? (
-            visible.map((p) => (
-              <Row key={p.id} product={p} onEdit={() => setDialog({ product: p })} />
-            ))
-          ) : (
-            <p className="table-empty">
-              {products.length
-                ? "No products match this filter."
-                : "No products yet. Add your first one."}
-            </p>
-          )}
-        </div>
-
-        <p className="admin-foot">
-          Demo data is saved in this browser only.{" "}
-          <button
-            className="text-btn"
-            onClick={() => {
-              if (confirm("Reset the catalogue to the starting products?"))
-                resetProducts();
-            }}
-          >
-            Reset to starting products
-          </button>
-        </p>
+        <button className="btn" onClick={() => setDialog({})}>
+          + Add product
+        </button>
       </div>
+
+      <div className="stats">
+        <Stat label="Products" value={products.length} />
+        <Stat label="Units in stock" value={stats.units} />
+        <Stat label="Stock value" value={money(stats.value)} />
+        <Stat
+          label="Needs attention"
+          value={stats.low + stats.out}
+          hint={`${stats.low} low · ${stats.out} sold out`}
+          warn={stats.low + stats.out > 0}
+        />
+      </div>
+
+      <div className="toolbar">
+        <div className="chips" role="group" aria-label="Filter products">
+          {(
+            [
+              ["all", "All"],
+              ["low", "Low stock"],
+              ["out", "Sold out"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              className={filter === key ? "chip on" : "chip"}
+              aria-pressed={filter === key}
+              onClick={() => setFilter(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <input
+          className="search"
+          type="search"
+          placeholder="Search products"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search products"
+        />
+      </div>
+
+      <DataTable
+        key={`${filter}|${query}`}
+        label="Products"
+        columns={columns}
+        rows={visible}
+        rowKey={(p) => p.id}
+        template="2.4fr 0.9fr 1.3fr 1fr 1.5fr"
+        pageSize={8}
+        empty={
+          products.length
+            ? "No products match this filter."
+            : "No products yet. Add your first one."
+        }
+      />
+
+      <p className="admin-foot">
+        Demo data is saved in this browser only.{" "}
+        <button
+          className="text-btn"
+          onClick={() => {
+            if (confirm("Reset the catalogue to the starting products?"))
+              resetProducts();
+          }}
+        >
+          Reset to starting products
+        </button>
+      </p>
 
       {dialog && (
         <ProductDialog
@@ -161,62 +208,37 @@ function Stat({
   );
 }
 
-function Row({ product: p, onEdit }: { product: Product; onEdit: () => void }) {
+function RowActions({
+  product: p,
+  onEdit,
+}: {
+  product: Product;
+  onEdit: () => void;
+}) {
   const [confirming, setConfirming] = useState(false);
-  const status =
-    p.stock <= 0
-      ? { cls: "out", label: "Sold out" }
-      : p.stock <= LOW_STOCK
-        ? { cls: "low", label: "Low stock" }
-        : { cls: "ok", label: "In stock" };
-
   return (
-    <div className="tr" role="row">
-      <div className="cell-product" role="cell">
-        <div className="thumb">
-          {p.image ? (
-            <Image src={p.image} alt="" fill sizes="56px" />
-          ) : (
-            <span>—</span>
-          )}
-        </div>
-        <div>
-          <strong>{p.name}</strong>
-          <small>{p.size}</small>
-        </div>
-      </div>
-      <span role="cell" data-label="Price">
-        {money(p.price)}
-      </span>
-      <span role="cell" data-label="Stock">
-        <StockControl key={p.stock} product={p} />
-      </span>
-      <span role="cell" data-label="Status">
-        <span className={`pill ${status.cls}`}>{status.label}</span>
-      </span>
-      <span role="cell" className="row-actions right">
-        <button className="text-btn" onClick={onEdit}>
-          Edit
-        </button>
-        {confirming ? (
-          <>
-            <button
-              className="text-btn danger"
-              onClick={() => deleteProduct(p.id)}
-            >
-              Confirm delete
-            </button>
-            <button className="text-btn" onClick={() => setConfirming(false)}>
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button className="text-btn danger" onClick={() => setConfirming(true)}>
-            Delete
+    <span className="row-actions">
+      <button className="text-btn" onClick={onEdit}>
+        Edit
+      </button>
+      {confirming ? (
+        <>
+          <button
+            className="text-btn danger"
+            onClick={() => deleteProduct(p.id)}
+          >
+            Confirm delete
           </button>
-        )}
-      </span>
-    </div>
+          <button className="text-btn" onClick={() => setConfirming(false)}>
+            Cancel
+          </button>
+        </>
+      ) : (
+        <button className="text-btn danger" onClick={() => setConfirming(true)}>
+          Delete
+        </button>
+      )}
+    </span>
   );
 }
 

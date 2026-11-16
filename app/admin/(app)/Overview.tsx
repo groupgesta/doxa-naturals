@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { LOW_STOCK, money } from "../../data/products";
+import { useMediaQuery } from "../../lib/media";
 import { useNow } from "../../lib/now";
 import {
   isRevenue,
@@ -21,6 +22,7 @@ export default function Overview() {
   const orders = useOrders();
   const products = useProducts();
   const [days, setDays] = useState<7 | 30>(30);
+  const narrow = useMediaQuery("(max-width: 900px)");
 
   const data = useMemo(() => {
     if (now === null) return null;
@@ -135,7 +137,7 @@ export default function Overview() {
           <div className="panels">
             <section className="panel wide">
               <h2>Revenue per day</h2>
-              <RevenueChart series={data.series} />
+              <RevenueChart series={data.series} narrow={narrow} />
             </section>
 
             <section className="panel">
@@ -232,10 +234,17 @@ export default function Overview() {
   );
 }
 
-function RevenueChart({ series }: { series: { start: number; total: number }[] }) {
-  const W = 640;
-  const H = 200;
-  const padL = 48;
+function RevenueChart({
+  series,
+  narrow,
+}: {
+  series: { start: number; total: number }[];
+  narrow: boolean;
+}) {
+  // Narrower canvas on phones so the axis text stays readable.
+  const W = narrow ? 340 : 640;
+  const H = narrow ? 210 : 200;
+  const padL = narrow ? 36 : 48;
   const padB = 24;
   const padT = 10;
   const max = Math.max(1, ...series.map((s) => s.total));
@@ -246,7 +255,7 @@ function RevenueChart({ series }: { series: { start: number; total: number }[] }
   const innerH = H - padB - padT;
   const bw = innerW / series.length;
   const ticks = [0, top / 2, top];
-  const every = series.length > 14 ? Math.ceil(series.length / 6) : 1;
+  const every = series.length > 14 ? Math.ceil(series.length / (narrow ? 4 : 6)) : 1;
 
   return (
     <svg

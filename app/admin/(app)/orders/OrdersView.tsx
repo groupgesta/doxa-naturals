@@ -5,15 +5,16 @@ import { money } from "../../../data/products";
 import {
   deleteOrder,
   isRevenue,
+  resetOrders,
   setOrderStatus,
   STATUS_LABEL,
   STATUS_ORDER,
-  resetOrders,
   useOrders,
   type Order,
   type OrderStatus,
 } from "../../../lib/orders";
 import { useProducts } from "../../../lib/store";
+import DataTable, { type Column } from "../../components/DataTable";
 import OrderDialog from "./OrderDialog";
 
 type Filter = "all" | OrderStatus;
@@ -39,11 +40,60 @@ function waLink(phone: string) {
   return `https://wa.me/${d.length === 8 ? "230" + d : d}`;
 }
 
+const columns: Column<Order>[] = [
+  {
+    id: "num",
+    header: "Order",
+    hideLabel: true,
+    cell: (o) => <span className="o-num">#{o.number}</span>,
+  },
+  {
+    id: "customer",
+    header: "Customer",
+    primary: true,
+    hideLabel: true,
+    cell: (o) => {
+      const units = o.items.reduce((s, i) => s + i.qty, 0);
+      return (
+        <span className="o-who">
+          <strong>{o.customer}</strong>
+          <small>
+            {fmt(o.createdAt)} · {units} {units === 1 ? "item" : "items"} ·{" "}
+            {o.pickup}
+          </small>
+        </span>
+      );
+    },
+  },
+  {
+    id: "status",
+    header: "Status",
+    cell: (o) => (
+      <span className={`pill s-${o.status}`}>{STATUS_LABEL[o.status]}</span>
+    ),
+  },
+  {
+    id: "total",
+    header: "Total",
+    align: "right",
+    cell: (o) => <strong>{money(o.total)}</strong>,
+  },
+  {
+    id: "caret",
+    header: "",
+    hideLabel: true,
+    cell: () => (
+      <span className="o-caret" aria-hidden="true">
+        ▾
+      </span>
+    ),
+  },
+];
+
 export default function OrdersView() {
   const orders = useOrders();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
-  const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
   const counts = useMemo(() => {
@@ -100,24 +150,21 @@ export default function OrdersView() {
         />
       </div>
 
-      <div className="orders">
-        {visible.length ? (
-          visible.map((o) => (
-            <OrderRow
-              key={o.id}
-              order={o}
-              expanded={open === o.id}
-              onToggle={() => setOpen(open === o.id ? null : o.id)}
-            />
-          ))
-        ) : (
-          <p className="table-empty">
-            {orders.length
-              ? "No orders match this filter."
-              : "No orders yet. When a customer messages you on WhatsApp, add the order here."}
-          </p>
-        )}
-      </div>
+      <DataTable
+        key={`${filter}|${query}`}
+        label="Orders"
+        columns={columns}
+        rows={visible}
+        rowKey={(o) => o.id}
+        template="70px 1.6fr 120px 120px 24px"
+        pageSize={10}
+        renderDetail={(o) => <OrderDetail order={o} />}
+        empty={
+          orders.length
+            ? "No orders match this filter."
+            : "No orders yet. When a customer messages you on WhatsApp, add the order here."
+        }
+      />
 
       <p className="admin-foot">
         Confirming an order takes its items out of stock. Cancelling or
@@ -137,20 +184,11 @@ export default function OrdersView() {
   );
 }
 
-function OrderRow({
-  order: o,
-  expanded,
-  onToggle,
-}: {
-  order: Order;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
+function OrderDetail({ order: o }: { order: Order }) {
   const products = useProducts();
   const [confirming, setConfirming] = useState(false);
   const next = NEXT[o.status];
   const wa = waLink(o.phone);
-  const units = o.items.reduce((s, i) => s + i.qty, 0);
 
   // Only meaningful before stock has been taken out.
   const short = o.stockDeducted
@@ -161,127 +199,100 @@ function OrderRow({
       });
 
   return (
-    <article className={`order${expanded ? " open" : ""}`}>
-      <button
-        className="order-summary"
-        onClick={onToggle}
-        aria-expanded={expanded}
-      >
-        <span className="o-num">#{o.number}</span>
-        <span className="o-who">
-          <strong>{o.customer}</strong>
-          <small>
-            {fmt(o.createdAt)} · {units} {units === 1 ? "item" : "items"} ·{" "}
-            {o.pickup}
-          </small>
-        </span>
-        <span className={`pill s-${o.status}`}>{STATUS_LABEL[o.status]}</span>
-        <strong className="o-total">{money(o.total)}</strong>
-        <span className="o-caret" aria-hidden="true">
-          ▾
-        </span>
-      </button>
-
-      {expanded && (
-        <div className="order-detail">
-          <ul className="o-items">
-            {o.items.map((i) => (
-              <li key={i.productId + i.name}>
-                <span>
-                  {i.qty} × {i.name} <small>({i.size})</small>
-                </span>
-                <span>{money(i.qty * i.price)}</span>
-              </li>
-            ))}
-            <li className="o-sum">
-              <span>Total</span>
-              <span>{money(o.total)}</span>
-            </li>
-          </ul>
-
-          <div className="o-meta">
+    <>
+      <ul className="o-items">
+        {o.items.map((i) => (
+          <li key={i.productId + i.name}>
             <span>
-              Phone: {o.phone || "not given"}
-              {wa && (
-                <>
-                  {" · "}
-                  <a href={wa} target="_blank" rel="noopener noreferrer">
-                    WhatsApp ↗
-                  </a>
-                </>
-              )}
+              {i.qty} × {i.name} <small>({i.size})</small>
             </span>
-            {o.note && <span>Note: {o.note}</span>}
-            {isRevenue(o) && <span>Counted in revenue.</span>}
-          </div>
+            <span>{money(i.qty * i.price)}</span>
+          </li>
+        ))}
+        <li className="o-sum">
+          <span>Total</span>
+          <span>{money(o.total)}</span>
+        </li>
+      </ul>
 
-          {short.length > 0 && (
-            <p className="form-error">
-              Not enough stock for {short.map((i) => i.name).join(", ")}.
-              Confirming will set it to 0.
-            </p>
+      <div className="o-meta">
+        <span>
+          Phone: {o.phone || "not given"}
+          {wa && (
+            <>
+              {" · "}
+              <a href={wa} target="_blank" rel="noopener noreferrer">
+                WhatsApp ↗
+              </a>
+            </>
           )}
+        </span>
+        {o.note && <span>Note: {o.note}</span>}
+        {isRevenue(o) && <span>Counted in revenue.</span>}
+      </div>
 
-          <div className="o-actions">
-            {next && (
-              <button
-                className="btn small"
-                onClick={() => setOrderStatus(o.id, next.to)}
-              >
-                {next.label}
-              </button>
-            )}
-            {(o.status === "new" ||
-              o.status === "confirmed" ||
-              o.status === "paid") && (
-              <button
-                className="btn secondary small"
-                onClick={() => setOrderStatus(o.id, "cancelled")}
-              >
-                Cancel order
-              </button>
-            )}
-            <label className="o-select">
-              Status
-              <select
-                value={o.status}
-                onChange={(e) =>
-                  setOrderStatus(o.id, e.target.value as OrderStatus)
-                }
-              >
-                {STATUS_ORDER.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABEL[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {confirming ? (
-              <>
-                <button
-                  className="text-btn danger"
-                  onClick={() => deleteOrder(o.id)}
-                >
-                  Confirm delete
-                </button>
-                <button
-                  className="text-btn"
-                  onClick={() => setConfirming(false)}
-                >
-                  Keep
-                </button>
-              </>
-            ) : (
-              <button
-                className="text-btn danger"
-                onClick={() => setConfirming(true)}
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        </div>
+      {short.length > 0 && (
+        <p className="form-error">
+          Not enough stock for {short.map((i) => i.name).join(", ")}.
+          Confirming will set it to 0.
+        </p>
       )}
-    </article>
+
+      <div className="o-actions">
+        {next && (
+          <button
+            className="btn small"
+            onClick={() => setOrderStatus(o.id, next.to)}
+          >
+            {next.label}
+          </button>
+        )}
+        {(o.status === "new" ||
+          o.status === "confirmed" ||
+          o.status === "paid") && (
+          <button
+            className="btn secondary small"
+            onClick={() => setOrderStatus(o.id, "cancelled")}
+          >
+            Cancel order
+          </button>
+        )}
+        <label className="o-select">
+          Status
+          <select
+            value={o.status}
+            onChange={(e) =>
+              setOrderStatus(o.id, e.target.value as OrderStatus)
+            }
+          >
+            {STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {confirming ? (
+          <>
+            <button
+              className="text-btn danger"
+              onClick={() => deleteOrder(o.id)}
+            >
+              Confirm delete
+            </button>
+            <button className="text-btn" onClick={() => setConfirming(false)}>
+              Keep
+            </button>
+          </>
+        ) : (
+          <button
+            className="text-btn danger"
+            onClick={() => setConfirming(true)}
+          >
+            Delete
+          </button>
+        )}
+      </div>
+    </>
   );
 }

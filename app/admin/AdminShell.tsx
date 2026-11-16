@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { signOut, useAdminSession } from "../lib/auth";
 import { useOrders } from "../lib/orders";
 
@@ -26,17 +26,27 @@ const icons = {
 };
 
 const nav = [
-  { href: "/admin", label: "Overview", icon: icons.overview },
-  { href: "/admin/orders", label: "Orders", icon: icons.orders },
-  { href: "/admin/products", label: "Products & stock", icon: icons.products },
+  { href: "/admin", label: "Overview", short: "Home", icon: icons.overview },
+  {
+    href: "/admin/orders",
+    label: "Orders",
+    short: "Orders",
+    icon: icons.orders,
+  },
+  {
+    href: "/admin/products",
+    label: "Products & stock",
+    short: "Products",
+    icon: icons.products,
+  },
 ];
 
-function Icon({ children }: { children: ReactNode }) {
+function Icon({ children, size = 20 }: { children: ReactNode; size?: number }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="20"
-      height="20"
+      width={size}
+      height={size}
       fill="currentColor"
       aria-hidden="true"
     >
@@ -50,25 +60,23 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const session = useAdminSession();
   const orders = useOrders();
-  const [open, setOpen] = useState(false);
   const newCount = orders.filter((o) => o.status === "new").length;
 
   useEffect(() => {
     if (session === false) router.replace("/admin/login");
   }, [session, router]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
   if (!session) return <div className="admin-loading">Loading…</div>;
+
+  const leave = () => {
+    signOut();
+    router.replace("/admin/login");
+  };
 
   return (
     <div className="shell">
-      <aside className={`sidebar${open ? " open" : ""}`} id="sidebar">
+      {/* Desktop: sidebar */}
+      <aside className="sidebar">
         <Link href="/admin" className="side-brand" aria-label="Admin home">
           <Image
             src="/images/logo.png"
@@ -87,7 +95,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 href={n.href}
                 className={on ? "side-link on" : "side-link"}
                 aria-current={on ? "page" : undefined}
-                onClick={() => setOpen(false)}
               >
                 <Icon>{n.icon}</Icon>
                 <span>{n.label}</span>
@@ -98,48 +105,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-
-        <div className="side-foot">
-          <Link href="/" className="side-link">
-            <Icon>{icons.shop}</Icon>
-            <span>View shop</span>
-          </Link>
-          <button
-            className="side-link"
-            onClick={() => {
-              signOut();
-              router.replace("/admin/login");
-            }}
-          >
-            <Icon>{icons.out}</Icon>
-            <span>Sign out</span>
-          </button>
-        </div>
       </aside>
-
-      {open && (
-        <div
-          className="side-scrim"
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
-      )}
 
       <div className="shell-main">
         <header className="topbar">
-          <button
-            className={`menu${open ? " is-open" : ""}`}
-            aria-expanded={open}
-            aria-controls="sidebar"
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((o) => !o)}
-          >
-            <span className="bars" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-          </button>
           <Image
             src="/images/logo.png"
             alt="Doxa Naturals"
@@ -150,6 +119,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           <span className="topbar-title">
             {nav.find((n) => n.href === pathname)?.label ?? "Admin"}
           </span>
+
+          {/* Desktop actions */}
           <div className="topbar-actions">
             <Link href="/" className="link-btn">
               View shop ↗
@@ -160,19 +131,47 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               </span>
               Admin
             </span>
-            <button
-              className="link-btn"
-              onClick={() => {
-                signOut();
-                router.replace("/admin/login");
-              }}
-            >
+            <button className="link-btn" onClick={leave}>
               Sign out
             </button>
           </div>
+
+          {/* Phone actions */}
+          <div className="topbar-icons">
+            <Link href="/" className="icon-btn" aria-label="View shop">
+              <Icon size={22}>{icons.shop}</Icon>
+            </Link>
+            <button className="icon-btn" aria-label="Sign out" onClick={leave}>
+              <Icon size={22}>{icons.out}</Icon>
+            </button>
+          </div>
         </header>
+
         <main className="admin-main">{children}</main>
       </div>
+
+      {/* Phone: bottom tab bar */}
+      <nav className="bottom-nav" aria-label="Admin sections">
+        {nav.map((n) => {
+          const on = pathname === n.href;
+          return (
+            <Link
+              key={n.href}
+              href={n.href}
+              className={on ? "bn-item on" : "bn-item"}
+              aria-current={on ? "page" : undefined}
+            >
+              <span className="bn-icon">
+                <Icon size={22}>{n.icon}</Icon>
+                {n.href === "/admin/orders" && newCount > 0 && (
+                  <span className="bn-badge">{newCount}</span>
+                )}
+              </span>
+              <span>{n.short}</span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
