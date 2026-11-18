@@ -298,47 +298,107 @@ h1 em {
 /* Products */
 .grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  column-gap: 20px;
+  row-gap: 0;
+  align-items: stretch;
+}
+.grid-empty {
+  padding: 60px 0;
+  text-align: center;
+  font-size: 14px;
+  color: #766b5d;
+}
+/* Every card fills its grid row, so cards in a row share one height and the
+   price/button row always sits on the bottom edge, whatever the text length. */
+.product {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-bottom: 32px;
+}
+/* Each card spans 4 rows of the grid (photo, name, text, price) and inherits
+   them with subgrid. The row tracks are shared across a row of cards, so
+   names, descriptions and buttons line up exactly even when one name wraps. */
+@supports (grid-template-rows: subgrid) {
+  .product {
+    display: grid;
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+    row-gap: 0;
+    height: auto;
+  }
 }
 .product .image {
-  height: 345px;
-  background: #efe5d6;
-  border-radius: 2px;
+  flex: none;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  /* Same peach as the product photos, so letterboxing is invisible. */
+  background: #fbeadb;
+  border-radius: 4px;
   position: relative;
   overflow: hidden;
 }
 .product h3 {
-  font-size: 23px;
-  margin: 19px 0 9px;
+  font-size: 22px;
+  line-height: 1.2;
+  margin: 16px 0 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .product p {
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: 13px;
+  line-height: 1.6;
   color: #766b5d;
-  min-height: 65px;
+  margin: 0 0 14px;
+  flex: 1 0 auto;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@supports not (grid-template-rows: subgrid) {
+  .product h3 {
+    min-height: 2.4em;
+  }
+  .product p {
+    min-height: calc(1.6em * 3);
+  }
 }
 .buy-row {
+  margin-top: auto;
   display: flex;
+  flex-wrap: nowrap;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #3b301d14;
 }
 .buy-row strong {
-  font-size: 14px;
+  font: 500 20px var(--serif);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 .buy-row button {
+  flex: none;
+  white-space: nowrap;
   border: 1px solid var(--olive);
-  color: var(--olive);
-  background: transparent;
-  border-radius: 30px;
-  padding: 9px 13px;
+  color: #fff;
+  background: var(--olive);
+  border-radius: 99px;
+  padding: 10px 16px;
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .buy-row button:hover {
-  background: var(--olive);
-  color: #fff;
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+  box-shadow: 0 6px 14px #b85f3e33;
 }
 .note {
   font-size: 11px;
@@ -494,9 +554,25 @@ footer {
   line-height: 1.7;
   color: #c6b9a2;
 }
-.foot a:not(.brand) {
+.foot-cols {
+  display: flex;
+  gap: clamp(28px, 5vw, 64px);
+}
+.foot-cols h4 {
+  margin: 0 0 14px;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--tan);
+}
+.foot-cols a {
+  display: block;
   font-size: 13px;
-  margin-left: 20px;
+  margin: 0 0 10px;
+  color: #f6e9d6;
+}
+.foot-cols a:hover {
+  color: var(--gold);
 }
 .copy {
   border-top: 1px solid #ffffff20;
@@ -546,12 +622,6 @@ footer .brand small {
   }
 }
 @media (max-width: 950px) {
-  .grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .product .image {
-    height: 300px;
-  }
 }
 @media (max-width: 800px) {
   .nav {
@@ -653,13 +723,6 @@ footer .brand small {
   .heading {
     display: block;
   }
-  .product p {
-    min-height: 75px;
-  }
-  .buy-row {
-    flex-direction: column;
-    align-items: start;
-  }
   .story-visual {
     min-height: 300px;
   }
@@ -676,9 +739,9 @@ footer .brand small {
   .foot {
     display: block;
   }
-  .foot a:not(.brand) {
-    display: inline-block;
-    margin: 18px 15px 0 0;
+  .foot-cols {
+    flex-wrap: wrap;
+    margin-top: 28px;
   }
 }
 @media (max-width: 400px) {
@@ -688,15 +751,6 @@ footer .brand small {
   }
   .nav > .brand img {
     width: 168px;
-  }
-  .grid {
-    grid-template-columns: 1fr;
-  }
-  .product .image {
-    height: 270px;
-  }
-  .product p {
-    min-height: 0;
   }
   .visual {
     height: 350px;
@@ -750,6 +804,9 @@ footer .brand small {
 }
 
 /* Hover polish */
+.product .image { transition: box-shadow 0.4s ease; }
+.product:hover .image { box-shadow: 0 14px 30px #1c160f1f; }
+:focus-visible { outline: 2px solid var(--terracotta); outline-offset: 3px; }
 .product .image img {
   transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -829,7 +886,197 @@ footer .brand small {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.buy-row button:disabled,
 .buy-row button:disabled:hover {
   background: transparent;
+  border-color: #3b301d33;
+  color: #766b5d;
+  box-shadow: none;
+}
+
+/* Content pages (privacy, terms, FAQ, contact) */
+.page {
+  padding: 80px var(--edge) 100px;
+}
+.page-head {
+  max-width: 760px;
+  margin: 0 auto 48px;
+}
+.page-head h1 {
+  font-size: clamp(40px, 5vw, 64px);
+  margin: 16px 0 18px;
+}
+.page-intro {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #5d5042;
+  margin: 0;
+}
+.page-updated {
+  font-size: 12px;
+  color: #8a7c68;
+  margin: 14px 0 0;
+}
+.prose {
+  max-width: 760px;
+  margin: 0 auto;
+  font-size: 15px;
+  line-height: 1.85;
+  color: #4a3f33;
+}
+.prose h2 {
+  font-size: 28px;
+  margin: 44px 0 12px;
+}
+.prose p,
+.prose ul,
+.prose ol {
+  margin: 0 0 16px;
+}
+.prose li {
+  margin-bottom: 6px;
+}
+.prose a:not(.btn) {
+  color: var(--terracotta);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.faq details {
+  border-top: 1px solid #d6c6b2;
+  padding: 18px 0;
+}
+.faq details:last-child {
+  border-bottom: 1px solid #d6c6b2;
+}
+.faq summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  font: 400 22px var(--serif);
+  color: var(--brown);
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary::after {
+  content: "+";
+  color: var(--terracotta);
+  font-size: 26px;
+  line-height: 1;
+  transition: transform 0.3s ease;
+}
+.faq details[open] summary::after {
+  transform: rotate(45deg);
+}
+.faq details p {
+  margin: 12px 0 0;
+}
+@media (max-width: 800px) {
+  .nav > .links.open-static {
+    position: static;
+    flex-direction: row;
+    clip-path: none;
+    visibility: visible;
+    box-shadow: none;
+    border: 0;
+    background: none;
+    padding: 0;
+    gap: 14px;
+  }
+  .links.open-static > * {
+    opacity: 1;
+    transform: none;
+  }
+  .links.open-static > a:not(.btn) {
+    width: auto;
+    border: 0;
+    padding: 0;
+    font-size: 11px;
+  }
+  .links.open-static > .btn {
+    margin-top: 0;
+    padding: 11px 14px;
+    font-size: 10px;
+  }
+}
+@media (max-width: 480px) {
+  .links.open-static > a:not(.btn) {
+    display: none;
+  }
+}
+
+/* Bag stays visible next to the hamburger on mobile */
+.nav-tools {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+.bag-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--olive);
+  border-radius: 50%;
   color: var(--olive);
+  transition: background 0.3s ease, color 0.3s ease, transform 0.2s ease;
+}
+.bag-btn:hover {
+  background: #4e55211a;
+}
+.bag-btn:active {
+  transform: scale(0.92);
+}
+.bag-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: 99px;
+  background: var(--terracotta);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  animation: bump 0.45s ease;
+}
+@media (max-width: 800px) {
+  .nav-tools {
+    display: flex;
+  }
+  .links .bag-link {
+    display: none;
+  }
+}
+
+/* Phones: one full-width card per row so photo, name and button are easy to read */
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .product {
+    padding-bottom: 36px;
+  }
+  .product .image {
+    aspect-ratio: 5 / 4;
+  }
+  .product h3 {
+    font-size: 24px;
+  }
+  .product p {
+    font-size: 14px;
+  }
+  .buy-row strong {
+    font-size: 22px;
+  }
+  .buy-row button {
+    padding: 12px 20px;
+    font-size: 12px;
+  }
 }

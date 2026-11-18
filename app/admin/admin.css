@@ -830,11 +830,76 @@
   padding: 4px 9px;
   border-radius: 99px;
 }
-.side-nav,
 .side-nav {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+.side-label {
+  margin: 18px 12px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #9a8a73;
+}
+.side-label:first-child {
+  margin-top: 4px;
+}
+.side-ext {
+  margin-left: auto;
+  opacity: 0.5;
+}
+.side-account {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  margin-top: 8px;
+  border: 1px solid #3b301d1f;
+  border-radius: 14px;
+  background: #fbf8f199;
+}
+.side-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.side-who b {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.side-who small {
+  font-size: 11px;
+  color: #8a7c68;
+}
+.side-out {
+  margin-left: auto;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #5d5042;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.side-out:hover {
+  background: #b85f3e1f;
+  color: var(--terracotta);
 }
 .side-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -857,6 +922,7 @@
 .side-link.on {
   background: var(--olive);
   color: #fff;
+  box-shadow: 0 6px 16px #4e55212e;
 }
 .side-link svg {
   flex: none;

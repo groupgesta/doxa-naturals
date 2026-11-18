@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
 import "./globals.css";
 
@@ -17,6 +17,16 @@ export const metadata: Metadata = {
   title: "Doxa Naturals | Haircare for Real Curls & Coils",
   description:
     "Doxa Naturals. Thoughtful natural-based haircare for curls, coils and textured hair. Made in Mauritius.",
+  openGraph: {
+    title: "Doxa Naturals | Haircare for Real Curls & Coils",
+    description:
+      "Thoughtful natural-based haircare for curls, coils and textured hair. Made in Mauritius.",
+    type: "website",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#4e5521",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

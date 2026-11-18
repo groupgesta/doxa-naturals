@@ -87,6 +87,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </Link>
 
         <nav className="side-nav" aria-label="Admin sections">
+          <p className="side-label">Manage</p>
           {nav.map((n) => {
             const on = pathname === n.href;
             return (
@@ -104,7 +105,34 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+
+          <p className="side-label">Shop</p>
+          <Link href="/" className="side-link" target="_blank" rel="noreferrer">
+            <Icon>{icons.shop}</Icon>
+            <span>View shop</span>
+            <span className="side-ext" aria-hidden="true">
+              ↗
+            </span>
+          </Link>
         </nav>
+
+        <div className="side-account">
+          <span className="topbar-avatar" aria-hidden="true">
+            D
+          </span>
+          <span className="side-who">
+            <b>Doxa Naturals</b>
+            <small>Administrator</small>
+          </span>
+          <button
+            className="side-out"
+            onClick={leave}
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <Icon size={18}>{icons.out}</Icon>
+          </button>
+        </div>
       </aside>
 
       <div className="shell-main">

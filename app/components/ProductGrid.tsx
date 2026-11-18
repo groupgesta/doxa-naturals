@@ -9,6 +9,15 @@ export default function ProductGrid() {
   const products = useProducts();
   const { add } = useCart();
 
+  if (products.length === 0) {
+    return (
+      <p className="grid-empty">
+        New products are on their way. Message me on WhatsApp for what is
+        available.
+      </p>
+    );
+  }
+
   return (
     <div className="grid">
       {products.map((p, i) => {
@@ -26,7 +35,7 @@ export default function ProductGrid() {
                   src={p.image}
                   alt={`${p.name}, ${p.size}`}
                   fill
-                  sizes="(max-width: 400px) 100vw, (max-width: 950px) 50vw, 300px"
+                  sizes="(max-width: 560px) 100vw, 300px"
                 />
               ) : (
                 <span className="no-photo">Photo coming soon</span>

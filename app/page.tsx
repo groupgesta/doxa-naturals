@@ -4,7 +4,7 @@ import Header from "./components/Header";
 import OrderCart from "./components/OrderCart";
 import RevealObserver from "./components/RevealObserver";
 import ProductGrid from "./components/ProductGrid";
-import Year from "./components/Year";
+import SiteFooter from "./components/SiteFooter";
 
 export default function Home() {
   return (
@@ -169,31 +169,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer>
-        <div className="wrap">
-          <div className="foot">
-            <div>
-              <a className="brand" href="#home">
-                <b>DOXA</b>
-                <small>NATURALS</small>
-              </a>
-              <p>
-                Haircare for real curls, coils and textured hair. Made with care
-                in Mauritius.
-              </p>
-            </div>
-            <div>
-              <a href="#collection">Collection</a>
-              <a href="#story">Our story</a>
-              <a href="#order">Order / Contact</a>
-              <a href="/admin/login">Admin</a>
-            </div>
-          </div>
-          <div className="copy">
-            © <Year /> Doxa Naturals. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </CartProvider>
   );
 }
