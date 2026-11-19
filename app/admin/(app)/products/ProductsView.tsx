@@ -6,10 +6,12 @@ import { LOW_STOCK, money, type Product } from "../../../data/products";
 import {
   adjustStock,
   deleteProduct,
-  resetProducts,
   updateProduct,
   useProducts,
+  useProductsReady,
 } from "../../../lib/store";
+import { useBusy } from "../../../lib/use-busy";
+import Spinner from "../../../components/Spinner";
 import DataTable, { type Column } from "../../components/DataTable";
 import ProductDialog from "../../ProductDialog";
 
@@ -26,6 +28,7 @@ function stockStatus(stock: number) {
 
 export default function ProductsView() {
   const products = useProducts();
+  const ready = useProductsReady();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -159,23 +162,16 @@ export default function ProductsView() {
         template="2.4fr 0.9fr 1.3fr 1fr 1.5fr"
         pageSize={8}
         empty={
-          products.length
-            ? "No products match this filter."
-            : "No products yet. Add your first one."
+          !ready
+            ? "Loading…"
+            : products.length
+              ? "No products match this filter."
+              : "No products yet. Add your first one."
         }
       />
 
       <p className="admin-foot">
-        Demo data is saved in this browser only.{" "}
-        <button
-          className="text-btn"
-          onClick={() => {
-            if (confirm("Reset the catalogue to the starting products?"))
-              resetProducts();
-          }}
-        >
-          Reset to starting products
-        </button>
+        Changes go live on the shop straight away.
       </p>
 
       {dialog && (
@@ -216,6 +212,7 @@ function RowActions({
   onEdit: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const [pending, act] = useBusy();
   return (
     <span className="row-actions">
       <button className="text-btn" onClick={onEdit}>
@@ -225,9 +222,10 @@ function RowActions({
         <>
           <button
             className="text-btn danger"
-            onClick={() => deleteProduct(p.id)}
+            disabled={pending !== null}
+            onClick={() => act("delete", () => deleteProduct(p.id))}
           >
-            Confirm delete
+            {pending === "delete" ? <Spinner /> : "Confirm delete"}
           </button>
           <button className="text-btn" onClick={() => setConfirming(false)}>
             Cancel
@@ -244,10 +242,12 @@ function RowActions({
 
 function StockControl({ product: p }: { product: Product }) {
   const [draft, setDraft] = useState(String(p.stock));
+  const [pending, act] = useBusy();
 
   function commit() {
     const n = Math.max(0, Math.floor(Number(draft)));
-    if (Number.isFinite(n) && n !== p.stock) updateProduct(p.id, { stock: n });
+    if (Number.isFinite(n) && n !== p.stock)
+      act("stock", () => updateProduct(p.id, { stock: n }));
     else setDraft(String(p.stock));
   }
 
@@ -255,8 +255,8 @@ function StockControl({ product: p }: { product: Product }) {
     <span className="stepper">
       <button
         aria-label={`Decrease ${p.name} stock`}
-        disabled={p.stock <= 0}
-        onClick={() => adjustStock(p.id, -1)}
+        disabled={pending !== null || p.stock <= 0}
+        onClick={() => act("minus", () => adjustStock(p.id, -1))}
       >
         −
       </button>
@@ -270,7 +270,8 @@ function StockControl({ product: p }: { product: Product }) {
       />
       <button
         aria-label={`Increase ${p.name} stock`}
-        onClick={() => adjustStock(p.id, 1)}
+        disabled={pending !== null}
+        onClick={() => act("plus", () => adjustStock(p.id, 1))}
       >
         +
       </button>

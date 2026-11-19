@@ -10,6 +10,7 @@ import {
   type OrderStatus,
 } from "../../../lib/orders";
 import { useProducts } from "../../../lib/store";
+import Spinner from "../../../components/Spinner";
 
 type Line = { key: number; productId: string; qty: number };
 
@@ -20,6 +21,7 @@ export default function OrderDialog({ onClose }: { onClose: () => void }) {
     { key: 0, productId: "", qty: 1 },
   ]);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const d = ref.current;
@@ -32,7 +34,7 @@ export default function OrderDialog({ onClose }: { onClose: () => void }) {
   const setLine = (key: number, patch: Partial<Line>) =>
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const customer = String(f.get("customer") ?? "").trim();
@@ -52,7 +54,8 @@ export default function OrderDialog({ onClose }: { onClose: () => void }) {
       return { productId, name: p.name, size: p.size, price: p.price, qty };
     });
 
-    const ok = addOrder({
+    setBusy(true);
+    const err = await addOrder({
       customer,
       phone: String(f.get("phone") ?? "").trim(),
       pickup: String(f.get("pickup")),
@@ -60,7 +63,8 @@ export default function OrderDialog({ onClose }: { onClose: () => void }) {
       status: String(f.get("status")) as OrderStatus,
       items,
     });
-    if (!ok) return setError("Storage is full. Delete some old orders first.");
+    setBusy(false);
+    if (err) return setError(err);
     ref.current?.close();
   }
 
@@ -201,8 +205,8 @@ export default function OrderDialog({ onClose }: { onClose: () => void }) {
           >
             Cancel
           </button>
-          <button type="submit" className="btn">
-            Add order
+          <button type="submit" className="btn" disabled={busy}>
+            {busy ? <><Spinner /> Saving</> : "Add order"}
           </button>
         </div>
       </form>

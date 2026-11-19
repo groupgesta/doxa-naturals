@@ -12,19 +12,18 @@ export default function Privacy() {
     <PageShell
       kicker="Privacy"
       title="Privacy policy"
-      intro="Short version: this website does not collect your personal details. Orders happen in a WhatsApp conversation with me."
+      intro="Short version: this website has no accounts and no trackers. When you order, I keep the items you picked and what you tell me on WhatsApp."
       updated="18 November 2026"
     >
       <h2>What this website collects</h2>
       <p>
-        Nothing about you. There are no customer accounts, no sign-up form, no
-        advertising trackers and no analytics scripts on this site. Fonts are
-        served from the site itself, so your browser does not contact Google
-        to load them.
+        There are no customer accounts, no sign-up form, no advertising
+        trackers and no analytics scripts on this site. Fonts are served from
+        the site itself, so your browser does not contact Google to load them.
       </p>
       <p>
         Your bag lives in the page while you shop. Close the tab and it is
-        gone.
+        gone, until you send your order.
       </p>
 
       <h2>What happens when you order</h2>
@@ -34,6 +33,13 @@ export default function Privacy() {
         total. You choose whether to send it. Once you do, the conversation is
         between you and me, and WhatsApp handles it under its own privacy
         policy.
+      </p>
+      <p>
+        When you tap the button, the website also saves the list of products
+        and quantities in my order records (hosted on Supabase), without your
+        name or number, even if you then decide not to send the message. I add your name, number and collection
+        point to that record from our conversation. Only I can open these
+        records.
       </p>
       <p>
         I see your WhatsApp name and number, plus anything you tell me to

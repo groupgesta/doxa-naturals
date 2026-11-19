@@ -5,27 +5,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { signIn, useAdminSession } from "../../lib/auth";
+import Spinner from "../../components/Spinner";
 
 export default function LoginForm() {
   const router = useRouter();
   const session = useAdminSession();
   const [show, setShow] = useState(false);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (session) router.replace("/admin");
   }, [session, router]);
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
     if (!email.includes("@")) return setError("Enter a valid email address.");
-    if (password.length < 6)
-      return setError("Password must be at least 6 characters.");
+    if (!password) return setError("Enter your password.");
     setError("");
-    signIn();
+    setBusy(true);
+    const err = await signIn(email, password);
+    setBusy(false);
+    if (err) return setError(err);
     router.replace("/admin");
   }
 
@@ -90,14 +94,10 @@ export default function LoginForm() {
             </p>
           )}
 
-          <button className="btn" type="submit">
-            Sign in
+          <button className="btn" type="submit" disabled={busy}>
+            {busy ? <><Spinner /> Signing in</> : "Sign in"}
           </button>
 
-          <p className="demo-note">
-            Demo mode: any email and a password of 6+ characters will sign you
-            in. Real authentication comes with the backend.
-          </p>
           <Link className="back-link" href="/">
             ← Back to the shop
           </Link>

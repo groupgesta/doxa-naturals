@@ -5,14 +5,16 @@ import { money } from "../../../data/products";
 import {
   deleteOrder,
   isRevenue,
-  resetOrders,
   setOrderStatus,
   STATUS_LABEL,
   STATUS_ORDER,
   useOrders,
+  useOrdersReady,
   type Order,
   type OrderStatus,
 } from "../../../lib/orders";
+import { useBusy } from "../../../lib/use-busy";
+import Spinner from "../../../components/Spinner";
 import { useProducts } from "../../../lib/store";
 import DataTable, { type Column } from "../../components/DataTable";
 import OrderDialog from "./OrderDialog";
@@ -92,6 +94,7 @@ const columns: Column<Order>[] = [
 
 export default function OrdersView() {
   const orders = useOrders();
+  const ready = useOrdersReady();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [adding, setAdding] = useState(false);
@@ -160,23 +163,17 @@ export default function OrdersView() {
         pageSize={10}
         renderDetail={(o) => <OrderDetail order={o} />}
         empty={
-          orders.length
-            ? "No orders match this filter."
-            : "No orders yet. When a customer messages you on WhatsApp, add the order here."
+          !ready
+            ? "Loading…"
+            : orders.length
+              ? "No orders match this filter."
+              : "No orders yet. Orders sent from the website appear here automatically."
         }
       />
 
       <p className="admin-foot">
         Confirming an order takes its items out of stock. Cancelling or
-        deleting it puts them back. Demo orders are saved in this browser only.{" "}
-        <button
-          className="text-btn"
-          onClick={() => {
-            if (confirm("Reset orders to the demo data?")) resetOrders();
-          }}
-        >
-          Reset demo orders
-        </button>
+        deleting it puts them back.
       </p>
 
       {adding && <OrderDialog onClose={() => setAdding(false)} />}
@@ -187,6 +184,7 @@ export default function OrdersView() {
 function OrderDetail({ order: o }: { order: Order }) {
   const products = useProducts();
   const [confirming, setConfirming] = useState(false);
+  const [pending, act] = useBusy();
   const next = NEXT[o.status];
   const wa = waLink(o.phone);
 
@@ -242,9 +240,10 @@ function OrderDetail({ order: o }: { order: Order }) {
         {next && (
           <button
             className="btn small"
-            onClick={() => setOrderStatus(o.id, next.to)}
+            disabled={pending !== null}
+            onClick={() => act("next", () => setOrderStatus(o.id, next.to))}
           >
-            {next.label}
+            {pending === "next" ? <Spinner /> : next.label}
           </button>
         )}
         {(o.status === "new" ||
@@ -252,17 +251,21 @@ function OrderDetail({ order: o }: { order: Order }) {
           o.status === "paid") && (
           <button
             className="btn secondary small"
-            onClick={() => setOrderStatus(o.id, "cancelled")}
+            disabled={pending !== null}
+            onClick={() => act("cancel", () => setOrderStatus(o.id, "cancelled"))}
           >
-            Cancel order
+            {pending === "cancel" ? <Spinner /> : "Cancel order"}
           </button>
         )}
         <label className="o-select">
           Status
           <select
             value={o.status}
+            disabled={pending !== null}
             onChange={(e) =>
-              setOrderStatus(o.id, e.target.value as OrderStatus)
+              act("status", () =>
+                setOrderStatus(o.id, e.target.value as OrderStatus),
+              )
             }
           >
             {STATUS_ORDER.map((s) => (
@@ -276,9 +279,10 @@ function OrderDetail({ order: o }: { order: Order }) {
           <>
             <button
               className="text-btn danger"
-              onClick={() => deleteOrder(o.id)}
+              disabled={pending !== null}
+              onClick={() => act("delete", () => deleteOrder(o.id))}
             >
-              Confirm delete
+              {pending === "delete" ? <Spinner /> : "Confirm delete"}
             </button>
             <button className="text-btn" onClick={() => setConfirming(false)}>
               Keep

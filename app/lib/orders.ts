@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from "react";
-import { products as catalogue } from "../data/products";
-import { adjustStock } from "./store";
+import { getSupabase } from "./supabase";
 
-// Demo persistence in localStorage, same idea as lib/store.ts. Replace the
-// read/write internals with API calls when there is a backend.
+// Orders backed by Supabase (tables: orders, order_items). Only signed-in
+// admins can read them. Customers create orders through the place_order
+// function, which takes prices from the products table. Stock changes happen
+// inside the database functions so they stay consistent.
 
 export type OrderStatus =
   | "new"
@@ -56,112 +57,113 @@ export type Order = {
 /** Money has been received. */
 export const isRevenue = (o: Order) =>
   o.status === "paid" || o.status === "collected";
-/** Counts toward stock and is not cancelled. */
-const holdsStock = (s: OrderStatus) =>
-  s === "confirmed" || s === "paid" || s === "collected";
 
-const KEY = "doxa:orders:v1";
+type OrderRow = {
+  id: string;
+  number: number;
+  created_at: string;
+  customer: string;
+  phone: string;
+  pickup: string;
+  note: string;
+  status: OrderStatus;
+  total: number;
+  stock_deducted: boolean;
+  order_items: {
+    id: number;
+    product_id: string;
+    name: string;
+    size: string;
+    price: number;
+    qty: number;
+  }[];
+};
+
+const rowToOrder = (r: OrderRow): Order => ({
+  id: r.id,
+  number: r.number,
+  createdAt: new Date(r.created_at).getTime(),
+  customer: r.customer,
+  phone: r.phone,
+  pickup: r.pickup,
+  note: r.note,
+  status: r.status,
+  total: r.total,
+  stockDeducted: r.stock_deducted,
+  items: [...r.order_items]
+    .sort((a, b) => a.id - b.id)
+    .map((i) => ({
+      productId: i.product_id,
+      name: i.name,
+      size: i.size,
+      price: i.price,
+      qty: i.qty,
+    })),
+});
+
 const listeners = new Set<() => void>();
-let cacheRaw: string | null | undefined;
-let cache: Order[] = [];
-let seeded: Order[] | null = null;
+const EMPTY: Order[] = [];
+let cache: Order[] = EMPTY;
+let ready = false;
+let started = false;
 
-// Demo orders, generated on the client only so the dashboard has something to
-// show. They are replaced the moment a real order is added or changed.
-function seed(): Order[] {
-  if (seeded) return seeded;
-  const DAY = 864e5;
-  const now = Date.now();
-  const byId = Object.fromEntries(catalogue.map((p) => [p.id, p]));
-  const rows: [number, string, string, string, [string, number][], OrderStatus][] =
-    [
-      [0.2, "Demo Customer A", "5700 0001", "Curepipe", [["butter", 1], ["gel", 1]], "new"],
-      [0.9, "Demo Customer B", "5700 0002", "Port Louis", [["oil", 1]], "confirmed"],
-      [1.4, "Demo Customer C", "5700 0003", "Quatre Bornes", [["butter", 2], ["spray", 1]], "paid"],
-      [2.2, "Demo Customer D", "5700 0004", "Curepipe", [["gel", 2]], "collected"],
-      [3.1, "Demo Customer E", "5700 0005", "Port Louis", [["shea", 1]], "collected"],
-      [4.5, "Demo Customer F", "5700 0006", "Curepipe", [["butter", 1], ["oil", 1], ["spray", 1]], "collected"],
-      [5.3, "Demo Customer A", "5700 0001", "Curepipe", [["gel", 1]], "collected"],
-      [6.8, "Demo Customer G", "5700 0007", "Quatre Bornes", [["oil", 2]], "cancelled"],
-      [8.4, "Demo Customer H", "5700 0008", "Port Louis", [["butter", 1], ["gel", 1]], "collected"],
-      [10.2, "Demo Customer I", "5700 0009", "Curepipe", [["spray", 2]], "collected"],
-      [12.6, "Demo Customer B", "5700 0002", "Port Louis", [["butter", 3]], "collected"],
-      [15.1, "Demo Customer J", "5700 0010", "Quatre Bornes", [["shea", 1], ["gel", 1]], "collected"],
-      [18.7, "Demo Customer K", "5700 0011", "Curepipe", [["oil", 1], ["spray", 1]], "collected"],
-      [21.3, "Demo Customer C", "5700 0003", "Quatre Bornes", [["butter", 1]], "collected"],
-      [24.9, "Demo Customer L", "5700 0012", "Port Louis", [["gel", 3], ["spray", 1]], "collected"],
-      [27.5, "Demo Customer M", "5700 0013", "Curepipe", [["butter", 2], ["oil", 1]], "collected"],
-      [33.0, "Demo Customer D", "5700 0004", "Curepipe", [["gel", 1], ["butter", 1]], "collected"],
-      [38.4, "Demo Customer N", "5700 0014", "Port Louis", [["shea", 1]], "collected"],
-    ];
-  seeded = rows
-    .map(([days, customer, phone, pickup, lines, status], i) => {
-      const items: OrderItem[] = lines.map(([id, qty]) => ({
-        productId: id,
-        name: byId[id].name,
-        size: byId[id].size,
-        price: byId[id].price,
-        qty,
-      }));
-      return {
-        id: `seed-${i}`,
-        number: 1000 + rows.length - i,
-        createdAt: Math.round(now - days * DAY),
-        customer,
-        phone,
-        pickup,
-        note: "",
-        items,
-        total: items.reduce((s, it) => s + it.price * it.qty, 0),
-        status,
-        stockDeducted: holdsStock(status),
-      };
-    })
-    .sort((a, b) => b.createdAt - a.createdAt);
-  return seeded;
-}
-
-function read(): Order[] {
-  let raw: string | null = null;
-  try {
-    raw = localStorage.getItem(KEY);
-  } catch {}
-  if (raw === cacheRaw) return cache;
-  cacheRaw = raw;
-  try {
-    cache = raw ? (JSON.parse(raw) as Order[]) : seed();
-  } catch {
-    cache = seed();
-  }
-  return cache;
-}
-
-function write(next: Order[] | null): boolean {
-  try {
-    if (next) localStorage.setItem(KEY, JSON.stringify(next));
-    else localStorage.removeItem(KEY);
-  } catch {
-    return false;
-  }
+async function load() {
+  const sb = getSupabase();
+  if (!sb) return;
+  const { data, error } = await sb
+    .from("orders")
+    .select("*, order_items(*)")
+    .order("created_at", { ascending: false });
+  if (error || !data) return;
+  cache = (data as OrderRow[]).map(rowToOrder);
+  ready = true;
   listeners.forEach((l) => l());
-  return true;
+}
+
+function start() {
+  if (started) return;
+  started = true;
+  const sb = getSupabase();
+  if (!sb) return;
+  void load();
+  sb.channel("orders-live")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "orders" },
+      () => void load(),
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "order_items" },
+      () => void load(),
+    )
+    .subscribe();
 }
 
 function subscribe(cb: () => void) {
   listeners.add(cb);
-  const onStorage = (e: StorageEvent) => e.key === KEY && cb();
-  window.addEventListener("storage", onStorage);
+  start();
   return () => {
     listeners.delete(cb);
-    window.removeEventListener("storage", onStorage);
   };
 }
 
-const EMPTY: Order[] = [];
-
-/** Empty on the server and during hydration, then the saved orders. */
+/** Empty on the server and until the orders have loaded. */
 export function useOrders(): Order[] {
-  return useSyncExternalStore(subscribe, read, () => EMPTY);
+  return useSyncExternalStore(
+    subscribe,
+    () => cache,
+    () => EMPTY,
+  );
+}
+
+/** False until the first load finishes. */
+export function useOrdersReady(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => ready,
+    () => false,
+  );
 }
 
 export type NewOrderInput = {
@@ -169,48 +171,48 @@ export type NewOrderInput = {
   phone: string;
   pickup: string;
   note: string;
-  items: OrderItem[];
+  items: Pick<OrderItem, "productId" | "qty">[];
   status: OrderStatus;
 };
 
-export function addOrder(input: NewOrderInput): boolean {
-  const orders = read();
-  const number = orders.reduce((m, o) => Math.max(m, o.number), 1000) + 1;
-  const deduct = holdsStock(input.status);
-  if (deduct) input.items.forEach((i) => adjustStock(i.productId, -i.qty));
-  const order: Order = {
-    ...input,
-    id: `o-${Date.now().toString(36)}`,
-    number,
-    createdAt: Date.now(),
-    total: input.items.reduce((s, i) => s + i.price * i.qty, 0),
-    stockDeducted: deduct,
-  };
-  return write([order, ...orders]);
+/** Every mutator resolves to an error message, or null on success. */
+export async function addOrder(input: NewOrderInput): Promise<string | null> {
+  const sb = getSupabase();
+  if (!sb) return "Supabase is not connected.";
+  const { error } = await sb.rpc("place_order", {
+    p_customer: input.customer,
+    p_phone: input.phone,
+    p_pickup: input.pickup,
+    p_note: input.note,
+    p_status: input.status,
+    p_items: input.items.map((i) => ({ product_id: i.productId, qty: i.qty })),
+  });
+  if (error) return error.message;
+  await load();
+  return null;
 }
 
-/** Moves an order to a new status and keeps product stock in step. */
-export function setOrderStatus(id: string, status: OrderStatus) {
-  const orders = read();
-  const o = orders.find((x) => x.id === id);
-  if (!o || o.status === status) return;
-  let stockDeducted = o.stockDeducted;
-  if (holdsStock(status) && !o.stockDeducted) {
-    o.items.forEach((i) => adjustStock(i.productId, -i.qty));
-    stockDeducted = true;
-  } else if (!holdsStock(status) && o.stockDeducted) {
-    o.items.forEach((i) => adjustStock(i.productId, i.qty));
-    stockDeducted = false;
-  }
-  write(orders.map((x) => (x.id === id ? { ...x, status, stockDeducted } : x)));
+/** Moves an order to a new status; the database keeps product stock in step. */
+export async function setOrderStatus(
+  id: string,
+  status: OrderStatus,
+): Promise<string | null> {
+  const sb = getSupabase();
+  if (!sb) return "Supabase is not connected.";
+  const { error } = await sb.rpc("set_order_status", {
+    p_id: id,
+    p_status: status,
+  });
+  if (error) return error.message;
+  await load();
+  return null;
 }
 
-export function deleteOrder(id: string) {
-  const o = read().find((x) => x.id === id);
-  if (o?.stockDeducted) o.items.forEach((i) => adjustStock(i.productId, i.qty));
-  write(read().filter((x) => x.id !== id));
-}
-
-export function resetOrders() {
-  return write(null);
+export async function deleteOrder(id: string): Promise<string | null> {
+  const sb = getSupabase();
+  if (!sb) return "Supabase is not connected.";
+  const { error } = await sb.rpc("delete_order", { p_id: id });
+  if (error) return error.message;
+  await load();
+  return null;
 }
