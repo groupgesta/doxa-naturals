@@ -310,3 +310,35 @@ where not exists (select 1 from public.products);
 --   insert into public.admins (user_id)
 --   select id from auth.users where email = 'you@example.com'
 --   on conflict do nothing;
+
+-- ------------------------------------------------- push notifications
+-- Devices of admins that want a notification on every new order.
+
+create table if not exists public.push_subscriptions (
+  endpoint   text primary key,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  p256dh     text not null,
+  auth       text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.push_subscriptions enable row level security;
+
+drop policy if exists "admins add own devices" on public.push_subscriptions;
+drop policy if exists "admins see own devices" on public.push_subscriptions;
+drop policy if exists "admins remove own devices" on public.push_subscriptions;
+create policy "admins add own devices" on public.push_subscriptions
+  for insert to authenticated
+  with check (user_id = auth.uid() and public.is_admin());
+create policy "admins see own devices" on public.push_subscriptions
+  for select to authenticated using (user_id = auth.uid());
+create policy "admins remove own devices" on public.push_subscriptions
+  for delete to authenticated using (user_id = auth.uid());
+
+-- Then create the trigger that calls the site on every new order:
+-- Dashboard > Integrations > Database Webhooks > Create a new hook
+--   Table: orders, Events: Update
+--   Type: HTTP Request, Method: POST
+--   URL: https://doxa-naturals.com/api/push/new-order
+--   HTTP Headers: add  Authorization = Bearer <your PUSH_WEBHOOK_SECRET>
+-- (Update, not Insert: place_order fills in the total last, so the site
+-- notifies once the order is complete.)
