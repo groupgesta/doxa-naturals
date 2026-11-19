@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { signOut, useAdminSession } from "../lib/auth";
 import { useOrders } from "../lib/orders";
+import NotifyToggle from "./NotifyToggle";
 
 const icons = {
   overview: (
@@ -106,6 +107,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             );
           })}
 
+          <p className="side-label">Alerts</p>
+          <NotifyToggle variant="side" />
+
           <p className="side-label">Shop</p>
           <Link href="/" className="side-link" target="_blank" rel="noreferrer">
             <Icon>{icons.shop}</Icon>
@@ -166,6 +170,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
           {/* Phone actions */}
           <div className="topbar-icons">
+            <NotifyToggle variant="icon" />
             <Link href="/" className="icon-btn" aria-label="View shop">
               <Icon size={22}>{icons.shop}</Icon>
             </Link>
