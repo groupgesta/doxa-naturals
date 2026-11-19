@@ -4,9 +4,11 @@ import Image from "next/image";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Product } from "../data/products";
 import { addProduct, updateProduct } from "../lib/store";
+import { getSupabase, PRODUCT_IMAGE_BUCKET } from "../lib/supabase";
+import Spinner from "../components/Spinner";
 
-// Downscale uploads so a few photos fit in localStorage (about 5 MB total).
-async function toDataUrl(file: File, max = 900): Promise<string> {
+// Downscale photos before upload so the shop stays fast on phones.
+async function toJpeg(file: File, max = 1200): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
@@ -16,7 +18,13 @@ async function toDataUrl(file: File, max = 900): Promise<string> {
   ctx.fillStyle = "#efe5d6";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.82);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("encode failed"))),
+      "image/jpeg",
+      0.85,
+    ),
+  );
 }
 
 export default function ProductDialog({
@@ -28,6 +36,8 @@ export default function ProductDialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [image, setImage] = useState(product?.image ?? "");
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const editing = Boolean(product);
 
@@ -40,14 +50,16 @@ export default function ProductDialog({
     if (!file) return;
     if (!file.type.startsWith("image/")) return setError("Choose an image file.");
     try {
-      setImage(await toDataUrl(file));
+      const jpeg = await toJpeg(file);
+      setBlob(jpeg);
+      setImage(URL.createObjectURL(jpeg));
       setError("");
     } catch {
       setError("That image could not be read. Try a JPG or PNG.");
     }
   }
 
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const name = String(f.get("name") ?? "").trim();
@@ -62,9 +74,28 @@ export default function ProductDialog({
     if (!Number.isInteger(stock) || stock < 0)
       return setError("Stock must be a whole number, 0 or more.");
 
-    const input = { name, size, price, stock, description, image };
-    const ok = product ? updateProduct(product.id, input) : addProduct(input);
-    if (!ok) return setError("Storage is full. Try a smaller photo.");
+    setBusy(true);
+    let imageUrl = image;
+    if (blob) {
+      const sb = getSupabase();
+      const path = `${crypto.randomUUID()}.jpg`;
+      const up = await sb?.storage
+        .from(PRODUCT_IMAGE_BUCKET)
+        .upload(path, blob, { contentType: "image/jpeg", cacheControl: "31536000" });
+      if (!sb || up?.error) {
+        setBusy(false);
+        return setError(up?.error?.message ?? "Supabase is not connected.");
+      }
+      imageUrl = sb.storage.from(PRODUCT_IMAGE_BUCKET).getPublicUrl(path).data
+        .publicUrl;
+    }
+
+    const input = { name, size, price, stock, description, image: imageUrl };
+    const err = product
+      ? await updateProduct(product.id, input)
+      : await addProduct(input);
+    setBusy(false);
+    if (err) return setError(err);
     ref.current?.close();
   }
 
@@ -111,7 +142,10 @@ export default function ProductDialog({
                 <button
                   type="button"
                   className="text-btn danger"
-                  onClick={() => setImage("")}
+                  onClick={() => {
+                    setImage("");
+                    setBlob(null);
+                  }}
                 >
                   Remove
                 </button>
@@ -179,8 +213,8 @@ export default function ProductDialog({
           >
             Cancel
           </button>
-          <button type="submit" className="btn">
-            {editing ? "Save changes" : "Add product"}
+          <button type="submit" className="btn" disabled={busy}>
+            {busy ? <><Spinner /> Saving</> : editing ? "Save changes" : "Add product"}
           </button>
         </div>
       </form>

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { WHATSAPP_NUMBER, money, type Product } from "../data/products";
 import { useProducts } from "../lib/store";
+import { getSupabase } from "../lib/supabase";
 
 type Cart = Record<string, number>;
 export type CartLine = { product: Product; qty: number };
@@ -37,6 +38,7 @@ export default function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart>({});
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSaved = useRef<{ sig: string; at: number } | null>(null);
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
@@ -84,6 +86,27 @@ export default function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkout = useCallback(() => {
+    // Record the order so it shows up in the admin dashboard. Prices are set
+    // by the database, and a double tap within 2 minutes is saved only once.
+    // WhatsApp opens regardless of whether this succeeds.
+    if (lines.length) {
+      const sig = lines.map((l) => `${l.product.id}:${l.qty}`).join(",");
+      const prev = lastSaved.current;
+      if (!prev || prev.sig !== sig || Date.now() - prev.at > 120000) {
+        lastSaved.current = { sig, at: Date.now() };
+        void getSupabase()?.rpc("place_order", {
+          p_customer: "",
+          p_phone: "",
+          p_pickup: "",
+          p_note: "Sent from the website",
+          p_status: "new",
+          p_items: lines.map((l) => ({
+            product_id: l.product.id,
+            qty: l.qty,
+          })),
+        });
+      }
+    }
     const msg = lines.length
       ? `Hello Doxa Naturals! I'd like to order:\n\n${lines
           .map(

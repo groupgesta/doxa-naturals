@@ -1,77 +1,109 @@
 import { useSyncExternalStore } from "react";
 import { products as defaults, type Product } from "../data/products";
+import { rowToProduct, type ProductRow } from "./product-row";
+import { getSupabase } from "./supabase";
 
-// Demo persistence: the catalogue lives in the browser's localStorage and is
-// shared by the shop and the admin dashboard. Swap this module for real API
-// calls once there is a backend; the hook and mutators are the whole surface.
+// Product catalogue backed by Supabase (table: products). The hook keeps a
+// module-level cache that the shop and the admin dashboard share, loads it
+// once, and refreshes it live through Supabase Realtime. Without Supabase env
+// vars it falls back to the starting catalogue in data/products.ts.
 
-const KEY = "doxa:products:v1";
 const listeners = new Set<() => void>();
+let cache: Product[] = getSupabase() ? [] : defaults;
+let ready = !getSupabase();
+let started = false;
 
-let cacheRaw: string | null | undefined;
-let cache: Product[] = defaults;
+const emit = () => listeners.forEach((l) => l());
 
-function read(): Product[] {
-  let raw: string | null = null;
-  try {
-    raw = localStorage.getItem(KEY);
-  } catch {}
-  if (raw === cacheRaw) return cache;
-  cacheRaw = raw;
-  try {
-    cache = raw ? (JSON.parse(raw) as Product[]) : defaults;
-  } catch {
-    cache = defaults;
-  }
-  return cache;
+/** Lets the server-rendered shop hand its products to the client store. */
+export function seedProducts(initial: Product[]) {
+  if (ready) return;
+  cache = initial;
+  ready = true;
 }
 
-function write(next: Product[] | null): boolean {
-  try {
-    if (next) localStorage.setItem(KEY, JSON.stringify(next));
-    else localStorage.removeItem(KEY);
-  } catch {
-    return false; // storage full or blocked
-  }
-  listeners.forEach((l) => l());
-  return true;
+async function load() {
+  const sb = getSupabase();
+  if (!sb) return;
+  const { data, error } = await sb
+    .from("products")
+    .select("id,name,size,price,description,image,stock")
+    .order("position");
+  if (error || !data) return;
+  cache = (data as ProductRow[]).map(rowToProduct);
+  ready = true;
+  emit();
+}
+
+function start() {
+  if (started) return;
+  started = true;
+  const sb = getSupabase();
+  if (!sb) return;
+  void load();
+  sb.channel("products-live")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "products" },
+      () => void load(),
+    )
+    .subscribe();
 }
 
 function subscribe(cb: () => void) {
   listeners.add(cb);
-  const onStorage = (e: StorageEvent) => e.key === KEY && cb();
-  window.addEventListener("storage", onStorage);
+  start();
   return () => {
     listeners.delete(cb);
-    window.removeEventListener("storage", onStorage);
   };
 }
 
 export function useProducts(): Product[] {
-  return useSyncExternalStore(subscribe, read, () => defaults);
+  return useSyncExternalStore(
+    subscribe,
+    () => cache,
+    () => cache,
+  );
+}
+
+/** False until the catalogue has loaded, so screens can avoid an empty flash. */
+export function useProductsReady(): boolean {
+  return useSyncExternalStore(
+    subscribe,
+    () => ready,
+    () => ready,
+  );
 }
 
 export type ProductInput = Omit<Product, "id">;
 
-export function addProduct(input: ProductInput): boolean {
-  const id = `p-${Date.now().toString(36)}`;
-  return write([...read(), { id, ...input }]);
+/** Every mutator resolves to an error message, or null on success. */
+async function run(
+  op: () => PromiseLike<{ error: { message: string } | null }>,
+): Promise<string | null> {
+  if (!getSupabase()) return "Supabase is not connected.";
+  const { error } = await op();
+  if (error) return error.message;
+  await load();
+  return null;
+}
+
+export function addProduct(input: ProductInput) {
+  const sb = getSupabase();
+  return run(() => sb!.from("products").insert(input));
 }
 
 export function updateProduct(id: string, patch: Partial<ProductInput>) {
-  return write(read().map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  const sb = getSupabase();
+  return run(() => sb!.from("products").update(patch).eq("id", id));
 }
 
 export function adjustStock(id: string, delta: number) {
-  const p = read().find((x) => x.id === id);
-  if (!p) return false;
-  return updateProduct(id, { stock: Math.max(0, p.stock + delta) });
+  const sb = getSupabase();
+  return run(() => sb!.rpc("adjust_stock", { p_id: id, p_delta: delta }));
 }
 
 export function deleteProduct(id: string) {
-  return write(read().filter((p) => p.id !== id));
-}
-
-export function resetProducts() {
-  return write(null);
+  const sb = getSupabase();
+  return run(() => sb!.from("products").delete().eq("id", id));
 }

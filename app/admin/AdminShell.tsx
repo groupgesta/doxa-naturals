@@ -68,8 +68,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
   if (!session) return <div className="admin-loading">Loading…</div>;
 
-  const leave = () => {
-    signOut();
+  const leave = async () => {
+    await signOut();
     router.replace("/admin/login");
   };
 
