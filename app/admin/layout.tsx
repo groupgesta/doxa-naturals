@@ -10,6 +10,9 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Admin | Doxa Naturals",
   robots: { index: false, follow: false },
+  // The install prompt only exists on admin pages, so shop visitors never see it.
+  manifest: "/admin.webmanifest",
+  appleWebApp: { capable: true, title: "Doxa Admin", statusBarStyle: "default" },
 };
 
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {

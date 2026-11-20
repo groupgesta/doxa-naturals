@@ -1,0 +1,13 @@
+{
+  "name": "Doxa Naturals Admin",
+  "short_name": "Doxa Admin",
+  "start_url": "/admin/orders",
+  "scope": "/admin/",
+  "display": "standalone",
+  "background_color": "#fbf8f1",
+  "theme_color": "#fbf8f1",
+  "icons": [
+    { "src": "/icon.png", "sizes": "any", "type": "image/png" },
+    { "src": "/apple-icon.png", "sizes": "any", "type": "image/png" }
+  ]
+}

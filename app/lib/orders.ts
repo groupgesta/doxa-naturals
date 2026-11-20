@@ -7,6 +7,7 @@ import { getSupabase } from "./supabase";
 // inside the database functions so they stay consistent.
 
 export type OrderStatus =
+  | "pending"
   | "new"
   | "confirmed"
   | "paid"
@@ -14,6 +15,7 @@ export type OrderStatus =
   | "cancelled";
 
 export const STATUS_LABEL: Record<OrderStatus, string> = {
+  pending: "Awaiting payment",
   new: "New",
   confirmed: "Confirmed",
   paid: "Paid",
@@ -22,6 +24,7 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
 };
 
 export const STATUS_ORDER: OrderStatus[] = [
+  "pending",
   "new",
   "confirmed",
   "paid",
@@ -29,7 +32,7 @@ export const STATUS_ORDER: OrderStatus[] = [
   "cancelled",
 ];
 
-export const PICKUPS = ["Curepipe", "Quatre Bornes", "Port Louis"] as const;
+export { PICKUPS } from "../data/products";
 
 export type OrderItem = {
   productId: string;
@@ -45,6 +48,7 @@ export type Order = {
   createdAt: number;
   customer: string;
   phone: string;
+  email: string;
   pickup: string;
   note: string;
   items: OrderItem[];
@@ -64,6 +68,7 @@ type OrderRow = {
   created_at: string;
   customer: string;
   phone: string;
+  email: string;
   pickup: string;
   note: string;
   status: OrderStatus;
@@ -85,6 +90,7 @@ const rowToOrder = (r: OrderRow): Order => ({
   createdAt: new Date(r.created_at).getTime(),
   customer: r.customer,
   phone: r.phone,
+  email: r.email,
   pickup: r.pickup,
   note: r.note,
   status: r.status,

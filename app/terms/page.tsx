@@ -17,21 +17,21 @@ export default function Terms() {
     >
       <h2>Orders</h2>
       <p>
-        An order is confirmed when I reply on WhatsApp and say it is. Until
-        then, stock shown on the website is an indication, not a reservation.
-        If something sold out in the meantime, I will tell you before you pay.
+        An order is confirmed when your card payment goes through. Until then,
+        stock shown on the website is not a reservation. If something sells out
+        while you check out, the website tells you before you pay.
       </p>
 
       <h2>Prices</h2>
       <p>
-        All prices are in Mauritian rupees (Rs). The total in your bag is the
-        total I confirm, unless I tell you otherwise before you pay.
+        All prices are in Mauritian rupees (Rs). The total shown on the Stripe
+        payment page is the total you pay.
       </p>
 
       <h2>Payment</h2>
       <p>
-        Pay in advance by MCB Juice or bank transfer once I have confirmed
-        your order. I prepare your products after payment arrives.
+        Pay in advance by card on the Stripe payment page. I prepare your
+        products after payment arrives.
       </p>
 
       <h2>Collection</h2>

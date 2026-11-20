@@ -12,8 +12,8 @@ export default function Privacy() {
     <PageShell
       kicker="Privacy"
       title="Privacy policy"
-      intro="Short version: this website has no accounts and no trackers. When you order, I keep the items you picked and what you tell me on WhatsApp."
-      updated="18 November 2026"
+      intro="Short version: no accounts, no trackers. When you order, I keep what you type at checkout. Card details go to Stripe, not to me."
+      updated="19 November 2026"
     >
       <h2>What this website collects</h2>
       <p>
@@ -28,22 +28,20 @@ export default function Privacy() {
 
       <h2>What happens when you order</h2>
       <p>
-        When you tap &quot;Send order on WhatsApp&quot;, your phone opens
-        WhatsApp with a message already written: the products, quantities and
-        total. You choose whether to send it. Once you do, the conversation is
-        between you and me, and WhatsApp handles it under its own privacy
-        policy.
+        At checkout you give your name and phone number, choose a collection
+        point, and can add an email. Stripe also asks for an email if you
+        did not give one, to send your receipt. I save these with the products and quantities in my
+        order records (hosted on Supabase). Only I can open these records.
       </p>
       <p>
-        When you tap the button, the website also saves the list of products
-        and quantities in my order records (hosted on Supabase), without your
-        name or number, even if you then decide not to send the message. I add your name, number and collection
-        point to that record from our conversation. Only I can open these
-        records.
+        You then pay on a page run by Stripe, which handles your card details
+        under its own privacy policy. I never see your card number. Stripe
+        sends me confirmation that the payment went through and emails you a
+        receipt.
       </p>
       <p>
-        I see your WhatsApp name and number, plus anything you tell me to
-        arrange payment and collection (a name, a collection point, a time).
+        I use your phone number to message you the day and place to collect,
+        by WhatsApp or SMS.
       </p>
 
       <h2>How I use your details</h2>
@@ -59,10 +57,8 @@ export default function Privacy() {
 
       <h2>Payment details</h2>
       <p>
-        This website never asks for card numbers or bank details. Payment is
-        arranged directly with me after I confirm your order, by MCB Juice or
-        bank transfer. Keep those details inside the conversation and do not
-        post them anywhere public.
+        Card payments are taken by Stripe on its own secure page. This website
+        never sees or stores your card number.
       </p>
 
       <h2>How long I keep things</h2>

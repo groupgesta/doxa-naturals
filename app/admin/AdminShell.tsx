@@ -61,7 +61,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const session = useAdminSession();
   const orders = useOrders();
-  const newCount = orders.filter((o) => o.status === "new").length;
+  const newCount = orders.filter(
+    (o) => o.status === "new" || o.status === "paid",
+  ).length;
 
   useEffect(() => {
     if (session === false) router.replace("/admin/login");
@@ -88,7 +90,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </Link>
 
         <nav className="side-nav" aria-label="Admin sections">
-          <p className="side-label">Manage</p>
           {nav.map((n) => {
             const on = pathname === n.href;
             return (
@@ -106,18 +107,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
-
-          <p className="side-label">Alerts</p>
-          <NotifyToggle variant="side" />
-
-          <p className="side-label">Shop</p>
-          <Link href="/" className="side-link" target="_blank" rel="noreferrer">
-            <Icon>{icons.shop}</Icon>
-            <span>View shop</span>
-            <span className="side-ext" aria-hidden="true">
-              ↗
-            </span>
-          </Link>
         </nav>
 
         <div className="side-account">
@@ -152,25 +141,22 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             {nav.find((n) => n.href === pathname)?.label ?? "Admin"}
           </span>
 
-          {/* Desktop actions */}
+          {/* Desktop action */}
           <div className="topbar-actions">
-            <Link href="/" className="link-btn">
+            <NotifyToggle />
+            <Link
+              href="/"
+              className="link-btn"
+              target="_blank"
+              rel="noreferrer"
+            >
               View shop ↗
             </Link>
-            <span className="topbar-user">
-              <span className="topbar-avatar" aria-hidden="true">
-                D
-              </span>
-              Admin
-            </span>
-            <button className="link-btn" onClick={leave}>
-              Sign out
-            </button>
           </div>
 
           {/* Phone actions */}
           <div className="topbar-icons">
-            <NotifyToggle variant="icon" />
+            <NotifyToggle compact />
             <Link href="/" className="icon-btn" aria-label="View shop">
               <Icon size={22}>{icons.shop}</Icon>
             </Link>
