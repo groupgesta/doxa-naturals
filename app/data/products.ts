@@ -8,6 +8,9 @@ export type Product = {
   stock: number;
 };
 
+/** Where customers can collect their order. */
+export const PICKUPS = ["Curepipe", "Quatre Bornes", "Port Louis"] as const;
+
 export const WHATSAPP_NUMBER = "23054766618";
 
 /** At or below this many units a product is flagged "low stock". */

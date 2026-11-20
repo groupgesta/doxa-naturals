@@ -225,6 +225,7 @@ function OrderDetail({ order: o }: { order: Order }) {
             </>
           )}
         </span>
+        {o.email && <span>Email: {o.email}</span>}
         {o.note && <span>Note: {o.note}</span>}
         {isRevenue(o) && <span>Counted in revenue.</span>}
       </div>

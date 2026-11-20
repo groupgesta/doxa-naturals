@@ -35,7 +35,9 @@ export default function Overview() {
     const prevPaid = orders.filter((o) => isRevenue(o) && inPrev(o));
     const revenue = paid.reduce((s, o) => s + o.total, 0);
     const prevRevenue = prevPaid.reduce((s, o) => s + o.total, 0);
-    const placed = orders.filter((o) => o.status !== "cancelled" && inPeriod(o));
+    const placed = orders.filter(
+      (o) => o.status !== "cancelled" && o.status !== "pending" && inPeriod(o),
+    );
     const awaiting = orders
       .filter((o) => o.status === "new" || o.status === "confirmed")
       .reduce((s, o) => s + o.total, 0);
@@ -77,7 +79,7 @@ export default function Overview() {
   }, [now, orders, days]);
 
   const alerts = products.filter((p) => p.stock <= LOW_STOCK);
-  const fresh = orders.filter((o) => o.status === "new");
+  const fresh = orders.filter((o) => o.status === "new" || o.status === "paid");
   const recent = orders.slice(0, 5);
 
   return (
@@ -87,17 +89,19 @@ export default function Overview() {
           <div className="kicker">Overview</div>
           <h1>How the shop is doing</h1>
         </div>
-        <div className="chips" role="group" aria-label="Period">
-          {([7, 30] as const).map((d) => (
-            <button
-              key={d}
-              className={days === d ? "chip on" : "chip"}
-              aria-pressed={days === d}
-              onClick={() => setDays(d)}
-            >
-              Last {d} days
-            </button>
-          ))}
+        <div className="head-tools">
+          <div className="chips" role="group" aria-label="Period">
+            {([7, 30] as const).map((d) => (
+              <button
+                key={d}
+                className={days === d ? "chip on" : "chip"}
+                aria-pressed={days === d}
+                onClick={() => setDays(d)}
+              >
+                Last {d} days
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -173,8 +177,8 @@ export default function Overview() {
                 {fresh.length > 0 && (
                   <li>
                     <span>
-                      <b>{fresh.length}</b> new{" "}
-                      {fresh.length === 1 ? "order" : "orders"} to confirm
+                      <b>{fresh.length}</b>{" "}
+                      {fresh.length === 1 ? "order" : "orders"} to hand over
                     </span>
                     <Link href="/admin/orders">Review</Link>
                   </li>
@@ -217,8 +221,7 @@ export default function Overview() {
                 </ul>
               ) : (
                 <p className="muted">
-                  No orders yet. Add one from the Orders tab when a customer
-                  messages you on WhatsApp.
+                  No orders yet. Paid orders from the website appear here.
                 </p>
               )}
             </section>
@@ -255,7 +258,8 @@ function RevenueChart({
   const innerH = H - padB - padT;
   const bw = innerW / series.length;
   const ticks = [0, top / 2, top];
-  const every = series.length > 14 ? Math.ceil(series.length / (narrow ? 4 : 6)) : 1;
+  const every =
+    series.length > 14 ? Math.ceil(series.length / (narrow ? 4 : 6)) : 1;
 
   return (
     <svg

@@ -12,14 +12,14 @@ export default function CollectionAndPayment() {
     <PageShell
       kicker="Collection and payment"
       title="How your order reaches you"
-      intro="No delivery at present. You collect in person, and you pay before collecting."
+      intro="You pay by card on the website, then collect in person. No delivery at present."
     >
       <h2>Step by step</h2>
       <ol>
-        <li>Add products to your bag and send the order on WhatsApp.</li>
-        <li>I confirm availability and your total.</li>
-        <li>You pay by MCB Juice or bank transfer and send me the receipt.</li>
-        <li>We agree on a day and place, and you collect.</li>
+        <li>Add products to your bag and tap Checkout.</li>
+        <li>Enter your name, phone, email and choose a collection point.</li>
+        <li>Pay by card on the secure Stripe page.</li>
+        <li>I message you the day and place, and you collect.</li>
       </ol>
 
       <h2>Collection points</h2>
@@ -29,15 +29,15 @@ export default function CollectionAndPayment() {
         <li>Port Louis</li>
       </ul>
       <p>
-        I share the exact meeting spot and time on WhatsApp once your payment
+        I share the exact meeting spot and time by message once your payment
         is in.
       </p>
 
       <h2>Payment methods</h2>
       <p>
-        MCB Juice or bank transfer, in advance. I send the details in the
-        conversation after confirming your order. This website never takes
-        payment.
+        Debit and credit cards, paid in advance on a secure page run by
+        Stripe. Your card details go to Stripe and never touch this website.
+        You get a receipt by email.
       </p>
 
       <h2>Delivery</h2>

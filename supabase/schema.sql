@@ -234,7 +234,7 @@ revoke all on function public.place_order(text,text,text,text,jsonb,text) from p
 revoke all on function public.set_order_status(text,text) from public;
 revoke all on function public.delete_order(text) from public;
 revoke all on function public.adjust_stock(text,integer) from public;
-grant execute on function public.place_order(text,text,text,text,jsonb,text) to anon, authenticated;
+grant execute on function public.place_order(text,text,text,text,jsonb,text) to authenticated;
 grant execute on function public.set_order_status(text,text) to authenticated;
 grant execute on function public.delete_order(text) to authenticated;
 grant execute on function public.adjust_stock(text,integer) to authenticated;
@@ -334,11 +334,139 @@ create policy "admins see own devices" on public.push_subscriptions
 create policy "admins remove own devices" on public.push_subscriptions
   for delete to authenticated using (user_id = auth.uid());
 
--- Then create the trigger that calls the site on every new order:
--- Dashboard > Integrations > Database Webhooks > Create a new hook
---   Table: orders, Events: Update
---   Type: HTTP Request, Method: POST
---   URL: https://doxa-naturals.com/api/push/new-order
---   HTTP Headers: add  Authorization = Bearer <your PUSH_WEBHOOK_SECRET>
--- (Update, not Insert: place_order fills in the total last, so the site
--- notifies once the order is complete.)
+-- The notification itself is sent by the Stripe webhook once an order is
+-- paid (see app/api/stripe/webhook/route.ts), so no Supabase webhook is needed.
+
+-- ----------------------------------------------------- card payments (Stripe)
+-- Customers pay on the website through Stripe Checkout. The server (using the
+-- service role key) creates a "pending" order, sends the customer to Stripe,
+-- and a Stripe webhook turns it into a "paid" order and takes the stock.
+-- Customers can no longer create orders directly, so the public order
+-- function is closed to anonymous visitors.
+
+revoke execute on function public.place_order(text,text,text,text,jsonb,text) from anon;
+
+alter table public.orders add column if not exists email text not null default '';
+alter table public.orders add column if not exists stripe_session_id text unique;
+
+alter table public.orders drop constraint if exists orders_status_check;
+alter table public.orders add constraint orders_status_check
+  check (status in ('pending','new','confirmed','paid','collected','cancelled'));
+
+-- Creates a pending order. Prices come from the products table. Stock is
+-- checked but not taken until the payment succeeds.
+create or replace function public.create_checkout_order(
+  p_customer text,
+  p_phone    text,
+  p_email    text,
+  p_pickup   text,
+  p_items    jsonb
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id     text := gen_random_uuid()::text;
+  v_number integer;
+  v_total  integer := 0;
+  v_item   jsonb;
+  v_prod   public.products%rowtype;
+  v_qty    integer;
+  v_lines  jsonb := '[]'::jsonb;
+begin
+  if jsonb_typeof(p_items) <> 'array'
+     or jsonb_array_length(p_items) = 0
+     or jsonb_array_length(p_items) > 30 then
+    raise exception 'Invalid items';
+  end if;
+
+  insert into public.orders (id, customer, phone, email, pickup, note, status)
+  values (
+    v_id,
+    left(coalesce(p_customer, ''), 120),
+    left(coalesce(p_phone, ''), 40),
+    left(coalesce(p_email, ''), 160),
+    left(coalesce(p_pickup, ''), 60),
+    'Paid online',
+    'pending'
+  )
+  returning number into v_number;
+
+  for v_item in select * from jsonb_array_elements(p_items) loop
+    v_qty := (v_item->>'qty')::integer;
+    if v_qty is null or v_qty < 1 or v_qty > 99 then
+      raise exception 'Invalid quantity';
+    end if;
+    select * into v_prod from public.products where id = v_item->>'product_id';
+    if not found then
+      raise exception 'Unknown product';
+    end if;
+    if v_prod.stock < v_qty then
+      raise exception 'Not enough stock for %', v_prod.name;
+    end if;
+    insert into public.order_items (order_id, product_id, name, size, price, qty)
+    values (v_id, v_prod.id, v_prod.name, v_prod.size, v_prod.price, v_qty);
+    v_total := v_total + v_prod.price * v_qty;
+    v_lines := v_lines || jsonb_build_object(
+      'name', v_prod.name, 'size', v_prod.size,
+      'price', v_prod.price, 'qty', v_qty);
+  end loop;
+
+  update public.orders set total = v_total where id = v_id;
+  return jsonb_build_object(
+    'id', v_id, 'number', v_number, 'total', v_total, 'items', v_lines);
+end;
+$$;
+
+-- Called by the Stripe webhook when a payment succeeds. Safe to call twice.
+create or replace function public.mark_order_paid(p_session text, p_email text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order public.orders%rowtype;
+  v_item  public.order_items%rowtype;
+begin
+  select * into v_order from public.orders
+    where stripe_session_id = p_session for update;
+  if not found then return null; end if;
+  if v_order.status in ('paid','collected') then
+    return jsonb_build_object('already', true);
+  end if;
+
+  if not v_order.stock_deducted then
+    for v_item in select * from public.order_items where order_id = v_order.id loop
+      update public.products set stock = greatest(0, stock - v_item.qty)
+        where id = v_item.product_id;
+    end loop;
+  end if;
+  update public.orders
+    set status = 'paid',
+        stock_deducted = true,
+        email = case when email = '' then left(coalesce(p_email, ''), 160) else email end
+    where id = v_order.id;
+  return jsonb_build_object(
+    'already', false, 'number', v_order.number, 'total', v_order.total);
+end;
+$$;
+
+-- Called when a Stripe checkout expires unpaid: the pending order is dropped.
+create or replace function public.drop_pending_order(p_session text)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.orders
+  where stripe_session_id = p_session and status = 'pending';
+$$;
+
+revoke all on function public.create_checkout_order(text,text,text,text,jsonb) from public, anon, authenticated;
+revoke all on function public.mark_order_paid(text,text) from public, anon, authenticated;
+revoke all on function public.drop_pending_order(text) from public, anon, authenticated;
+grant execute on function public.create_checkout_order(text,text,text,text,jsonb) to service_role;
+grant execute on function public.mark_order_paid(text,text) to service_role;
+grant execute on function public.drop_pending_order(text) to service_role;

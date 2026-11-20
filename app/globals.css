@@ -1108,3 +1108,94 @@ button:disabled:has(> .spinner) {
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation-duration: 1.6s; }
 }
+
+/* Checkout form in the bag */
+.cart-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
+  margin-top: 4px;
+  padding-top: 22px;
+  border-top: 1px solid #d2bfa5;
+}
+.cart-form-title {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0;
+  font: 600 22px var(--serif);
+  color: var(--brown);
+}
+.cart-form-title button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: 500 12px var(--sans);
+  color: var(--terracotta);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cart-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font: 600 12px var(--sans);
+  letter-spacing: 0.02em;
+  color: #4a3f33;
+}
+.cart-form .wide {
+  grid-column: 1 / -1;
+}
+.cart-form input,
+.cart-form select {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1.5px solid #b79c78;
+  border-radius: 10px;
+  background-color: #fffdf9;
+  font: 400 16px var(--sans);
+  color: var(--brown);
+  appearance: none;
+  -webkit-appearance: none;
+}
+.cart-form select {
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%234e5521' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+}
+.cart-form input::placeholder {
+  color: #a8987f;
+}
+.cart-form input:focus,
+.cart-form select:focus {
+  border-color: var(--olive);
+  box-shadow: 0 0 0 3px #4e552126;
+  outline: none;
+}
+.cart-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f3d9c9;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #9a3a1d;
+}
+.cart-form .btn {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  min-height: 52px;
+}
+@media (max-width: 480px) {
+  .cart {
+    padding: 28px 20px;
+  }
+  .cart-form {
+    grid-template-columns: 1fr;
+  }
+}

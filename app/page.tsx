@@ -169,25 +169,25 @@ export default async function Home() {
               <div className="kicker">How to order</div>
               <h2>Your next haircare favourite is a message away.</h2>
               <p>
-                Add products to your bag and send your order to me on WhatsApp.
-                I&apos;ll confirm availability, payment and collection with you
-                personally.
+                Add products to your bag and pay by card on a secure page. I
+                message you the day and place to collect, in Curepipe, Quatre
+                Bornes or Port Louis.
               </p>
               <div className="order-step" data-reveal>
                 <b>01</b>
-                <span>Choose your products or message me with a question.</span>
+                <span>Choose your products and tap Checkout.</span>
               </div>
               <div className="order-step" data-reveal>
                 <b>02</b>
                 <span>
-                  Once confirmed, pay in advance by MCB Juice or bank transfer.
+                  Pay by card on the secure Stripe page.
                 </span>
               </div>
               <div className="order-step" data-reveal>
                 <b>03</b>
                 <span>
-                  Collection by arrangement in Curepipe, Quatre Bornes or Port
-                  Louis. No delivery at present.
+                  Collect in Curepipe, Quatre Bornes or Port Louis at a time we
+                  agree by message. No delivery at present.
                 </span>
               </div>
             </div>

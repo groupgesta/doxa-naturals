@@ -9,9 +9,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { WHATSAPP_NUMBER, money, type Product } from "../data/products";
+import type { Product } from "../data/products";
 import { useProducts } from "../lib/store";
-import { getSupabase } from "../lib/supabase";
+
+export type CheckoutDetails = {
+  name: string;
+  phone: string;
+  email: string;
+  pickup: string;
+};
 
 type Cart = Record<string, number>;
 export type CartLine = { product: Product; qty: number };
@@ -22,7 +28,7 @@ type CartContextValue = {
   total: number;
   add: (id: string) => void;
   remove: (id: string) => void;
-  checkout: () => void;
+  checkout: (details: CheckoutDetails) => Promise<string | null>;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -38,7 +44,6 @@ export default function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart>({});
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSaved = useRef<{ sig: string; at: number } | null>(null);
 
   const flash = useCallback((msg: string) => {
     setToast(msg);
@@ -85,44 +90,31 @@ export default function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const checkout = useCallback(() => {
-    // Record the order so it shows up in the admin dashboard. Prices are set
-    // by the database, and a double tap within 2 minutes is saved only once.
-    // WhatsApp opens regardless of whether this succeeds.
-    if (lines.length) {
-      const sig = lines.map((l) => `${l.product.id}:${l.qty}`).join(",");
-      const prev = lastSaved.current;
-      if (!prev || prev.sig !== sig || Date.now() - prev.at > 120000) {
-        lastSaved.current = { sig, at: Date.now() };
-        void getSupabase()?.rpc("place_order", {
-          p_customer: "",
-          p_phone: "",
-          p_pickup: "",
-          p_note: "Sent from the website",
-          p_status: "new",
-          p_items: lines.map((l) => ({
-            product_id: l.product.id,
-            qty: l.qty,
-          })),
+  // Creates the order on the server and sends the customer to Stripe to pay.
+  // Resolves to an error message; on success the page navigates away.
+  const checkout = useCallback(
+    async (details: CheckoutDetails): Promise<string | null> => {
+      try {
+        const res = await fetch("/api/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...details,
+            items: lines.map((l) => ({ id: l.product.id, qty: l.qty })),
+          }),
         });
+        const data = (await res.json()) as { url?: string; error?: string };
+        if (!res.ok || !data.url) {
+          return data.error ?? "Something went wrong. Please try again.";
+        }
+        window.location.assign(data.url);
+        return null;
+      } catch {
+        return "No connection. Please try again.";
       }
-    }
-    const msg = lines.length
-      ? `Hello Doxa Naturals! I'd like to order:\n\n${lines
-          .map(
-            (l) =>
-              `${l.qty} × ${l.product.name} (${l.product.size}) - ${money(l.qty * l.product.price)}`,
-          )
-          .join(
-            "\n",
-          )}\n\nTotal: ${money(total)}\n\nPlease confirm availability and collection arrangements. Thank you!`
-      : "Hello Doxa Naturals! I would like to ask about your products and how to order.";
-    window.open(
-      `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
-  }, [lines, total]);
+    },
+    [lines],
+  );
 
   const value = useMemo(
     () => ({ lines, count, total, add, remove, checkout }),

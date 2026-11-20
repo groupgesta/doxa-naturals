@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "How do I order?",
-    a: "Add products to your bag and tap Send order on WhatsApp. I confirm availability and your total, then we arrange payment and collection.",
+    a: "Add products to your bag, tap Checkout, enter your details and pay by card. I then message you the day and place to collect.",
   },
   {
     q: "Do you deliver?",
@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     q: "How do I pay?",
-    a: "In advance, by MCB Juice or bank transfer, after I confirm your order. The website never takes payment.",
+    a: "By card, on a secure Stripe page, when you check out. Your card details never touch this website.",
   },
   {
     q: "A product shows as sold out. Can I still get it?",
